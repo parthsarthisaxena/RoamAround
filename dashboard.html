@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard | RoamCircle</title>
+  <meta name="description" content="Logged-in RoamCircle dashboard with AI itinerary generation.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;700;800&family=Fraunces:opsz,wght@9..144,700;9..144,800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="index.html">
+      <span class="brand-mark">R</span>
+      <span>RoamCircle</span>
+    </a>
+    <nav class="nav" aria-label="Dashboard navigation">
+      <a href="#planner-tool">AI planner</a>
+      <a class="request-nav" href="#requests">Requests <span id="request-count">3</span></a>
+      <a href="#dashboard-matches">Matches</a>
+      <a href="index.html">Log out</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="dashboard-hero">
+      <p class="eyebrow">Logged-in dashboard</p>
+      <h1>Your trip workspace.</h1>
+      <p>Generate itineraries, review compatible travelers, and turn accepted matches into shared plans.</p>
+    </section>
+
+    <section class="planner-zone" id="planner-tool">
+      <div class="section-heading">
+        <p class="eyebrow">AI trip studio</p>
+        <h2>Generate a usable itinerary, not a generic tourist list.</h2>
+      </div>
+
+      <div class="planner-shell">
+        <form class="planner-form" id="planner-form">
+          <div class="field">
+            <label for="destination">Destination</label>
+            <input id="destination" name="destination" value="Bali" placeholder="Tokyo, Bali, Paris..." required>
+          </div>
+
+          <div class="field-row">
+            <div class="field">
+              <label for="days">Days</label>
+              <select id="days" name="days">
+                <option value="3">3 days</option>
+                <option value="4">4 days</option>
+                <option value="5" selected>5 days</option>
+                <option value="7">7 days</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="budget">Budget</label>
+              <select id="budget" name="budget">
+                <option value="budget">Budget</option>
+                <option value="mid-range" selected>Mid-range</option>
+                <option value="premium">Premium</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="vibe">Travel vibe</label>
+            <select id="vibe" name="vibe">
+              <option value="balanced" selected>Balanced</option>
+              <option value="adventure">Adventure</option>
+              <option value="social">Social</option>
+              <option value="food">Food-focused</option>
+              <option value="wellness">Wellness</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="notes">Must-have plans</label>
+            <textarea id="notes" name="notes" rows="4">Sunrise spots, stylish cafes, one beach club afternoon, and a calm final day.</textarea>
+          </div>
+
+          <button class="button primary full" type="submit">Generate AI itinerary</button>
+          <p class="status" id="planner-status" aria-live="polite"></p>
+        </form>
+
+        <section class="planner-result" aria-label="Generated itinerary">
+          <div class="result-top">
+            <div>
+              <p class="eyebrow">Generated trip</p>
+              <h2 id="planner-title">5-day Bali flow</h2>
+            </div>
+            <span class="badge" id="planner-source">Demo draft</span>
+          </div>
+          <p id="planner-summary">A balanced draft for cafes, scenery, social time, and room to breathe.</p>
+          <div class="days" id="planner-days">
+            <article class="day-card">
+              <span>Day 1</span>
+              <strong>Arrive, settle in, and keep the first evening easy</strong>
+              <p>Check into a walkable base, get oriented, and choose a relaxed sunset dinner.</p>
+            </article>
+            <article class="day-card">
+              <span>Day 2</span>
+              <strong>Surf lesson, brunch cafes, and a beach club afternoon</strong>
+              <p>Mix one active morning with a social afternoon so the group has momentum.</p>
+            </article>
+          </div>
+        </section>
+      </div>
+    </section>
+
+    <section class="dashboard-matches" id="dashboard-matches">
+      <section class="request-inbox" id="requests" aria-label="Travel buddy requests">
+        <div class="section-heading">
+          <p class="eyebrow">Travel buddy requests</p>
+          <h2>Accept or reject people who want to join your trip.</h2>
+          <p>When someone sends a request, the logged-in traveler should see why they matched before deciding.</p>
+        </div>
+
+        <div class="request-list">
+          <article class="request-card" data-request-card>
+            <div>
+              <span class="request-score">91% match</span>
+              <h3><a href="profile-lea.html" target="_blank" rel="noopener">Lea wants to join your Bali trip</a></h3>
+              <p>Dates overlap by 5 days. Shared preferences: mid-range budget, cafes, beach plans, women-only comfort filter.</p>
+              <div class="profile-details">
+                <div>
+                  <strong>Qualities</strong>
+                  <p>Calm planner, punctual, prefers clear budgets, likes early starts.</p>
+                </div>
+                <div>
+                  <strong>Travel style</strong>
+                  <p>Balanced pace, boutique stays, public transit, scenic cafes.</p>
+                </div>
+                <div>
+                  <strong>Verification</strong>
+                  <p>ID verified, 7 references, emergency contact added.</p>
+                </div>
+              </div>
+            </div>
+            <div class="request-actions">
+              <button class="button compact accept" type="button" data-request-action="accept">Accept</button>
+              <button class="button compact reject" type="button" data-request-action="reject">Reject</button>
+            </div>
+          </article>
+
+          <article class="request-card" data-request-card>
+            <div>
+              <span class="request-score">84% match</span>
+              <h3><a href="profile-maya.html" target="_blank" rel="noopener">Maya sent a travel buddy request</a></h3>
+              <p>Strong fit for photography, safe neighborhoods, shared transit, and relaxed evening plans.</p>
+              <div class="profile-details">
+                <div>
+                  <strong>Qualities</strong>
+                  <p>Friendly, detail-oriented, confident with maps, easygoing in groups.</p>
+                </div>
+                <div>
+                  <strong>Travel style</strong>
+                  <p>Photo walks, brunch spots, design stores, relaxed evenings.</p>
+                </div>
+                <div>
+                  <strong>Verification</strong>
+                  <p>Photo verified, linked Instagram, 4 completed meetups.</p>
+                </div>
+              </div>
+            </div>
+            <div class="request-actions">
+              <button class="button compact accept" type="button" data-request-action="accept">Accept</button>
+              <button class="button compact reject" type="button" data-request-action="reject">Reject</button>
+            </div>
+          </article>
+
+          <article class="request-card" data-request-card>
+            <div>
+              <span class="request-score">78% match</span>
+              <h3><a href="profile-jun.html" target="_blank" rel="noopener">Jun requested a remote-work day meetup</a></h3>
+              <p>Good fit for coworking mornings and social dinners, but budget is slightly lower than yours.</p>
+              <div class="profile-details">
+                <div>
+                  <strong>Qualities</strong>
+                  <p>Independent, organized, comfortable meeting in public places first.</p>
+                </div>
+                <div>
+                  <strong>Travel style</strong>
+                  <p>Coworking mornings, food markets, group dinners, flexible afternoons.</p>
+                </div>
+                <div>
+                  <strong>Verification</strong>
+                  <p>Email verified, LinkedIn connected, 2 references pending.</p>
+                </div>
+              </div>
+            </div>
+            <div class="request-actions">
+              <button class="button compact accept" type="button" data-request-action="accept">Accept</button>
+              <button class="button compact reject" type="button" data-request-action="reject">Reject</button>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <div class="section-heading">
+        <p class="eyebrow">Potential matches</p>
+        <h2>Shown after profile and trip details are complete.</h2>
+      </div>
+      <div class="cards">
+        <article class="mini-card coral">
+          <span>91%</span>
+          <strong><a href="profile-lea.html" target="_blank" rel="noopener">Aanya + Lea</a></strong>
+          <p>Dates, budget, cafe plans, and comfort filters overlap strongly.</p>
+          <div class="match-profile">
+            <p><strong>Lea:</strong> calm planner, sunrise hikes, boutique stays, women-only groups.</p>
+            <p><strong>Best fit:</strong> cafes, beaches, shared taxis, easy evenings.</p>
+          </div>
+        </article>
+        <article class="mini-card violet">
+          <span>84%</span>
+          <strong><a href="profile-maya.html" target="_blank" rel="noopener">Sofia + Maya</a></strong>
+          <p>Photography, beach plans, and women-only preferences line up.</p>
+          <div class="match-profile">
+            <p><strong>Maya:</strong> social photographer, safe neighborhoods, brunch spots, relaxed pace.</p>
+            <p><strong>Best fit:</strong> photo walks, markets, group dinners.</p>
+          </div>
+        </article>
+        <article class="mini-card blue">
+          <span>78%</span>
+          <strong><a href="profile-jun.html" target="_blank" rel="noopener">Jun + Malik</a></strong>
+          <p>Remote-work mornings and social evenings make this a possible fit.</p>
+          <div class="match-profile">
+            <p><strong>Jun:</strong> remote worker, organized, flexible with afternoon plans.</p>
+            <p><strong>Best fit:</strong> coworking, food markets, casual meetups.</p>
+          </div>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>
