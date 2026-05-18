@@ -1,59 +1,82 @@
-const plannerForm = document.querySelector("#planner-form");
+const plannerForm = document.querySelector("#trip-form");
 const plannerTitle = document.querySelector("#planner-title");
 const plannerSummary = document.querySelector("#planner-summary");
 const plannerDays = document.querySelector("#planner-days");
-const plannerStatus = document.querySelector("#planner-status");
+const plannerStatus = document.querySelector("#planner-status") || document.querySelector("#trip-status");
 const plannerSource = document.querySelector("#planner-source");
-const requestCount = document.querySelector("#request-count");
-const requestCards = document.querySelectorAll("[data-request-card]");
+const signupForm = document.querySelector("#signup-form");
+
+const PROFILE_KEY = "rc_user_profile_v1";
 
 const demoTemplates = {
+  motorcycle: [
+    ["Leave early, reach the first night stop before dark", "Cold engine start, fuel up, and aim for 250km before heat peaks. Settle into a safe overnight town."],
+    ["First mountain roads - pace yourself on the ghats", "Windy roads, scenic stops every 60-80km. Let the bike breathe on long climbs."],
+    ["Fuel and food checkpoint day", "Longer flat stretch. Eat well, check tyres and chain, and refuel twice."],
+    ["High altitude begins", "Keep this day shorter. Check bike fluids and watch for altitude fatigue."],
+    ["The pass day", "Start early. Expect cold, thin air, loose gravel, and slower movement."],
+    ["Descent into the valley", "Wide open views and smoother roads. Arrive with time to explore."],
+    ["Final stretch and destination arrival", "Easy mileage. Photograph everything, park the bike, and recover."]
+  ],
+  roadtrip: [
+    ["Load the car, hit the highway early", "Motorway miles, one major fuel stop, and a comfortable evening arrival."],
+    ["Scenic detour day", "Leave the highway and use the mountain road or coastal route."],
+    ["Rest and explore a town", "Short drive day. Walk, eat, and sleep well before the next push."],
+    ["Long haul through the interior", "Flat and fast. Podcasts, snacks, and one proper lunch stop."],
+    ["Mountain or border crossing day", "Slower going, but worth it for the views."],
+    ["Almost there", "Final overnight before the destination."],
+    ["Arrival day", "Short drive, big arrival, and explore on foot."]
+  ],
+  hiking: [
+    ["Trailhead day - gear check and first camp", "Light first day. Set up base, check gear, and sleep early."],
+    ["First full day on trail", "Steady elevation gain. Pace conservatively and hydrate constantly."],
+    ["Remote section", "Carry enough water and snacks. Long kilometres, best views."],
+    ["Rest camp day", "Short hike to a viewpoint, then rest."],
+    ["Summit or high point attempt", "Alpine start. Cold, technical, and memorable."],
+    ["Descent begins", "Trekking poles help. Go slower than the ascent."],
+    ["Trail out and celebrate", "Final kilometres, then find a good meal and a shower."]
+  ],
   balanced: [
-    ["Arrive and settle into the best base", "Check into a walkable area, do a light neighborhood loop, and choose an easy dinner."],
-    ["Start with one signature local experience", "Use the morning for a scenic highlight, then leave the afternoon open for cafes and photos."],
-    ["Mix social energy with downtime", "Plan one shared activity, one relaxed meal, and enough space for the group to recharge."],
-    ["Explore beyond the obvious route", "Add a nearby neighborhood, market, coast, or gallery district that gives the trip texture."],
-    ["Close with a calm final-day memory", "Keep logistics light with brunch, a spa or beach stop, and reliable transport timing."],
-    ["Add a flexible day trip", "Use this day for an island hop, train ride, countryside route, or weather-dependent plan."],
-    ["Make departure simple", "Stay close to your base, grab one last meal, and avoid tight timing."]
-  ],
-  adventure: [
-    ["Arrive and get moving", "Drop bags, scout the area, and add a walk, ride, surf session, or light trail."],
-    ["Use the best weather window", "Put the hardest physical activity early, then recover with a casual meal."],
-    ["Pair adrenaline with scenery", "Stack one active plan with a viewpoint, waterfall, beach, or sunset stop."],
-    ["Take the longer route", "Use scooters, bikes, or a road-trip-style day to find smaller places organically."],
-    ["End with a sunrise or sunset push", "Close the trip with a memorable active plan and easy logistics."],
-    ["Hold one challenge day", "Keep space for hikes, dives, canyon routes, or weather-dependent transfers."],
-    ["Recover before departure", "Stretch, eat well, and keep the final day generous."]
-  ],
-  social: [
-    ["Ease in with dinner and drinks", "Start close to the stay so the group can settle in naturally."],
-    ["Choose a shared daytime activity", "A food walk, boat ride, group class, or beach setup creates quick momentum."],
-    ["Leave room for spontaneous add-ons", "Keep an open block so new ideas can enter the trip."],
-    ["Use the most social district", "Pick live music, rooftops, markets, or a bar street where plans can flex."],
-    ["Close with a shared ritual", "Book a farewell dinner, picnic, or sunset stop that feels like a proper ending."],
-    ["Add a low-pressure conversation block", "Use coworking, brunch, or a long cafe stop to make the group feel less transactional."],
-    ["Coordinate departure day", "Align luggage, transport, and one final meal."]
-  ],
-  food: [
-    ["Start with a local welcome meal", "Choose a first dinner that represents the destination without overloading arrival day."],
-    ["Build the morning around markets", "Start with bakeries, coffee, or produce spots, then walk nearby streets."],
-    ["Make lunch the centerpiece", "Book a signature spot or street-food crawl and keep the rest of the day lighter."],
-    ["Balance meals with movement", "Add parks, galleries, or coastal walks between bigger food moments."],
-    ["End with the reservation", "Use the final night for the table or tasting worth planning around."],
-    ["Protect a snack-and-wander day", "Leave room for spontaneous cafes, desserts, and local finds."],
-    ["Keep departure close", "Choose one last brunch or coffee stop near the stay."]
-  ],
-  wellness: [
-    ["Arrive softly", "Skip the rush with a calm meal, gentle walk, and quiet evening."],
-    ["Anchor the morning", "Use sunrise for yoga, tea, journaling, stretching, or an easy swim."],
-    ["Blend nature with light structure", "Choose gardens, beaches, spa blocks, or scenic drives."],
-    ["Leave space on purpose", "Protect time for naps, reading, coworking, or simply being somewhere beautiful."],
-    ["End grounded", "Book a massage, long brunch, sound bath, or calm coastal stop."],
-    ["Use one deeper reset day", "Try a spa circuit, thermal bath, or countryside retreat."],
-    ["Make departure ultra-simple", "Use reliable transport and one familiar cafe before leaving."]
+    ["Arrive and settle in", "Short travel, orientation walk, easy first dinner."],
+    ["First full exploration day", "Hit the main highlight, find a good lunch spot, and wander in the afternoon."],
+    ["Off the beaten path", "Ask a local and find something not in the guidebook."],
+    ["Rest and recharge", "Late breakfast, slow afternoon, early evening out."],
+    ["Best day", "The thing you most wanted to do. Give it the whole day."],
+    ["Wind down day", "Light plans, good meal, and pack for departure."],
+    ["Departure day", "One final coffee spot before leaving."]
   ]
 };
+
+function loadProfile() {
+  try {
+    return JSON.parse(localStorage.getItem(PROFILE_KEY) || "{}");
+  } catch {
+    return {};
+  }
+}
+
+function saveProfile(profile) {
+  localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
+}
+
+function setFieldValue(id, value) {
+  const field = document.getElementById(id);
+  if (field && value) {
+    field.value = value;
+  }
+}
+
+function applyProfileToDashboard() {
+  const profile = loadProfile();
+  setFieldValue("source", profile.source);
+  setFieldValue("destination", profile.destination);
+  setFieldValue("trip-type", profile.tripType);
+  setFieldValue("vehicle", profile.vehicle);
+  setFieldValue("pace", profile.pace);
+  setFieldValue("budget", profile.budget);
+  setFieldValue("habits", profile.habits);
+  setFieldValue("meetpoints", profile.meetpoints);
+}
 
 function titleCase(value) {
   return value
@@ -63,90 +86,115 @@ function titleCase(value) {
     .join(" ");
 }
 
-function buildDemoItinerary(input) {
-  const destination = titleCase(input.destination.trim() || "Your Trip");
-  const templates = demoTemplates[input.vibe] || demoTemplates.balanced;
-  const days = templates.slice(0, input.days).map((item, index) => ({
-    day: index + 1,
-    title: item[0],
-    description: item[1],
-    morning: "Start with the highest-energy plan while timing is easiest.",
-    afternoon: "Keep the middle of the day flexible for food, transit, or weather.",
-    evening: "Choose a group-friendly dinner or calm reset depending on energy."
-  }));
+function buildDemo(input) {
+  const destination = titleCase(input.destination || "Your Trip");
+  const type = input.tripType || "balanced";
+  const template = demoTemplates[type] || demoTemplates.balanced;
+  const count = Math.min(Number(input.days) || 5, 7);
 
   return {
-    title: `${input.days}-day ${destination} flow`,
-    summary: `A ${input.budget} ${input.vibe} draft for ${destination}. Focus areas: ${input.notes || "local highlights, downtime, and safe logistics"}.`,
-    days
+    title: `${count}-day ${destination} ${type === "motorcycle" ? "ride" : "trip"}`,
+    summary: `${input.budget || "Mid-range"} | ${input.source ? `${input.source} to ${destination}` : destination}`,
+    days: template.slice(0, count).map((item, index) => ({
+      day: index + 1,
+      title: item[0],
+      description: item[1],
+      morning: "Early start recommended for this leg.",
+      afternoon: "Pace yourself and adjust based on group energy.",
+      evening: "Rest, eat, and plan tomorrow."
+    }))
   };
 }
 
 function renderItinerary(itinerary) {
-  plannerTitle.textContent = itinerary.title;
-  plannerSummary.textContent = itinerary.summary;
-  plannerDays.innerHTML = itinerary.days
-    .map((day) => `
-      <article class="day-card">
-        <span>Day ${day.day}</span>
-        <strong>${day.title}</strong>
-        <p>${day.description}</p>
-        <p><strong>Morning:</strong> ${day.morning}</p>
-        <p><strong>Afternoon:</strong> ${day.afternoon}</p>
-        <p><strong>Evening:</strong> ${day.evening}</p>
-      </article>
-    `)
-    .join("");
+  if (!plannerDays) return;
+
+  if (plannerTitle) plannerTitle.textContent = itinerary.title;
+  if (plannerSummary) plannerSummary.textContent = itinerary.summary;
+
+  plannerDays.innerHTML = itinerary.days.map((day) => `
+    <article class="day-card">
+      <span>Day ${day.day}</span>
+      <strong>${day.title}</strong>
+      <p>${day.description}</p>
+      <p><strong>Morning:</strong> ${day.morning}</p>
+      <p><strong>Afternoon:</strong> ${day.afternoon}</p>
+      <p><strong>Evening:</strong> ${day.evening}</p>
+    </article>
+  `).join("");
 }
 
-async function fetchAiItinerary(input) {
+async function fetchAI(input) {
   const response = await fetch("/api/itinerary", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input)
   });
 
   if (!response.ok) {
     const errorBody = await response.json().catch(() => ({}));
-    throw new Error(errorBody.error || "AI itinerary generation failed.");
+    throw new Error(errorBody.error || `Server error ${response.status}`);
   }
 
   return response.json();
 }
 
-if (plannerForm && plannerTitle && plannerSummary && plannerDays && plannerStatus && plannerSource) {
+if (signupForm) {
+  signupForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+
+    const formData = new FormData(signupForm);
+    saveProfile({
+      name: String(formData.get("name") || ""),
+      email: String(formData.get("email") || ""),
+      source: String(formData.get("source") || ""),
+      destination: String(formData.get("destination") || ""),
+      tripType: String(formData.get("tripType") || "motorcycle"),
+      vehicle: String(formData.get("vehicle") || ""),
+      pace: String(formData.get("pace") || "moderate"),
+      budget: String(formData.get("budget") || "mid"),
+      habits: String(formData.get("habits") || ""),
+      meetpoints: String(formData.get("meetpoints") || "")
+    });
+
+    window.location.href = "dashboard.html";
+  });
+}
+
+applyProfileToDashboard();
+
+if (plannerForm && plannerDays) {
   plannerForm.addEventListener("submit", async (event) => {
     event.preventDefault();
 
     const formData = new FormData(plannerForm);
     const input = {
+      source: String(formData.get("source") || ""),
       destination: String(formData.get("destination") || ""),
       days: Number(formData.get("days") || 5),
-      budget: String(formData.get("budget") || "mid-range"),
-      vibe: String(formData.get("vibe") || "balanced"),
-      notes: String(formData.get("notes") || "")
+      budget: String(formData.get("budget") || "mid"),
+      tripType: String(formData.get("trip-type") || "motorcycle"),
+      vehicle: String(formData.get("vehicle") || ""),
+      habits: String(formData.get("habits") || ""),
+      notes: String(formData.get("habits") || "")
     };
 
-    plannerTitle.textContent = "Building your trip...";
-    plannerSummary.textContent = "Asking the AI planner for a practical day-by-day route.";
+    if (plannerTitle) plannerTitle.textContent = "Planning your route...";
+    if (plannerSummary) plannerSummary.textContent = "Asking the AI for a day-by-day plan.";
     plannerDays.innerHTML = "";
-    plannerStatus.textContent = "";
-    plannerSource.textContent = "AI running";
+    if (plannerStatus) plannerStatus.textContent = "";
+    if (plannerSource) plannerSource.textContent = "AI running";
 
     try {
-      const itinerary = await fetchAiItinerary(input);
+      const itinerary = await fetchAI(input);
       renderItinerary(itinerary);
-      plannerSource.textContent = "OpenAI";
-      plannerStatus.textContent = "Generated with the backend AI route.";
+      if (plannerSource) plannerSource.textContent = "OpenAI";
+      if (plannerStatus) plannerStatus.textContent = "Generated with AI.";
     } catch (error) {
-      console.error("[planner error]", error.message);
-      renderItinerary(buildDemoItinerary(input));
-      plannerSource.textContent = "Demo draft";
-      plannerStatus.textContent = error.message.includes("OPENAI_API_KEY")
-        ? "No API key configured — showing demo output."
-        : `AI unavailable (${error.message}) — showing demo output.`;
+      console.error("[planner]", error.message);
+      renderItinerary(buildDemo(input));
+      if (plannerSource) plannerSource.textContent = "Demo";
+      if (plannerStatus) plannerStatus.textContent = `AI unavailable (${error.message}) - showing demo plan.`;
     }
   });
 }

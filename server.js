@@ -81,7 +81,10 @@ async function generateItinerary(input) {
   const destination = String(input.destination || "").trim();
   const days = Math.min(Math.max(Number(input.days || 5), 1), 7);
   const budget = String(input.budget || "mid-range");
-  const vibe = String(input.vibe || "balanced");
+  const source = String(input.source || "").trim();
+  const tripType = String(input.tripType || input.vibe || "balanced");
+  const vehicle = String(input.vehicle || "").trim();
+  const habits = String(input.habits || "").trim();
   const notes = String(input.notes || "").trim();
 
   if (!destination) {
@@ -96,12 +99,16 @@ async function generateItinerary(input) {
 
   const prompt = [
     "Create a realistic travel itinerary for a social travel companion app.",
+    `Source: ${source || "Not specified"}`,
     `Destination: ${destination}`,
     `Trip length: ${days} days`,
     `Budget: ${budget}`,
-    `Travel vibe: ${vibe}`,
-    `Must-have plans: ${notes || "Balanced local highlights, food, downtime, and safe logistics."}`,
-    "Keep it practical, specific, and friendly for solo travelers meeting compatible travel friends.",
+    `Trip type: ${tripType}`,
+    `Vehicle or gear: ${vehicle || "Not specified"}`,
+    `Traveler habits and preferences: ${habits || "Not specified"}`,
+    `Extra notes: ${notes || "Balanced route highlights, safe logistics, fuel/rest stops, and realistic pacing."}`,
+    "Keep it practical, specific, and friendly for travelers meeting compatible trip partners.",
+    "Include route safety, rest timing, and realistic daily pacing where relevant.",
     "Return only the structured itinerary requested by the schema."
   ].join("\n");
 
