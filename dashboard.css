@@ -685,3 +685,17 @@
   .req-details-grid { grid-template-columns: 1fr; }
   .matches-grid { grid-template-columns: 1fr 1fr; }
 }
+
+/* ── Nav logout button ─────────────────────────────────────── */
+.nav-logout-btn {
+  background: none;
+  border: none;
+  color: rgba(255,255,255,0.55);
+  font-size: 0.88rem;
+  font-weight: 700;
+  padding: 8px 14px;
+  border-radius: 500px;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+}
+.nav-logout-btn:hover { color: #fff; background: rgba(255,255,255,0.08); }

@@ -22,7 +22,7 @@
       </div>
       <div class="chat-header-info">
         <div class="chat-header-name" id="chat-header-name">Lea Martin</div>
-        <div class="chat-header-trip" id="chat-header-trip">Select a matched traveler</div>
+        <div class="chat-header-trip" id="chat-header-trip">Mumbai → Ladakh</div>
       </div>
       <button class="chat-close" id="chat-close" aria-label="Close chat">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -32,10 +32,11 @@
     <div class="chat-itinerary-snippet" id="chat-snippet">
       <div class="snippet-label">🏍️ Shared route</div>
       <div class="snippet-days" id="snippet-days">
-        <div class="snippet-day"><strong>Start</strong>Your source</div>
-        <div class="snippet-day"><strong>Meet</strong>Meet point</div>
-        <div class="snippet-day"><strong>Stop</strong>Rest stop</div>
-        <div class="snippet-day"><strong>Final</strong>Destination</div>
+        <div class="snippet-day"><strong>Start</strong>Mumbai</div>
+        <div class="snippet-day"><strong>Day 3</strong>Pune</div>
+        <div class="snippet-day"><strong>Day 5</strong>Nashik</div>
+        <div class="snippet-day"><strong>Day 8</strong>Aurangabad</div>
+        <div class="snippet-day"><strong>Dest</strong>Ladakh</div>
       </div>
     </div>
     <div class="chat-messages" id="chat-messages" role="log" aria-live="polite"></div>
@@ -66,7 +67,7 @@
         <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M20 2H4a2 2 0 0 0-2 2v18l4-4h14a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2z"/></svg>
         Chats <span class="nav-chat-count" id="nav-chat-count" hidden>0</span>
       </button>
-      <a href="index.html">Log out</a>
+      <button class="nav-logout-btn" id="nav-logout">Log out</button>
     </nav>
   </header>
 
@@ -84,7 +85,7 @@
       <div class="section-heading">
         <p class="eyebrow">My published trip</p>
         <h2>Tell the community where you're headed.</h2>
-        <p>Others going the same route, even from a different source, can send you a request to ride together.</p>
+        <p>Others going the same route — even from a different source — can send you a request to ride together.</p>
       </div>
 
       <div class="planner-shell">
@@ -96,11 +97,11 @@
           <div class="field-row">
             <div class="field">
               <label for="source">From (source city)</label>
-              <input id="source" name="source" placeholder="e.g. Mumbai" required>
+              <input id="source" name="source" placeholder="e.g. Mumbai" value="Mumbai" required>
             </div>
             <div class="field">
               <label for="destination">To (destination)</label>
-              <input id="destination" name="destination" placeholder="e.g. Ladakh" required>
+              <input id="destination" name="destination" placeholder="e.g. Ladakh" value="Ladakh" required>
             </div>
           </div>
 
@@ -121,17 +122,17 @@
             <div class="field">
               <label for="trip-type">Trip type</label>
               <select id="trip-type" name="trip-type">
-                <option value="motorcycle">Motorcycle ride</option>
-                <option value="roadtrip">Road trip (car)</option>
-                <option value="cycling">Cycling</option>
-                <option value="hiking">Hiking / trekking</option>
-                <option value="backpacking">Backpacking</option>
-                <option value="train">Train journey</option>
+                <option value="motorcycle">🏍️ Motorcycle ride</option>
+                <option value="roadtrip">🚗 Road trip (car)</option>
+                <option value="cycling">🚴 Cycling</option>
+                <option value="hiking">🥾 Hiking / trekking</option>
+                <option value="backpacking">🎒 Backpacking</option>
+                <option value="train">🚆 Train journey</option>
               </select>
             </div>
             <div class="field">
               <label for="vehicle">Vehicle / gear</label>
-              <input id="vehicle" name="vehicle" placeholder="e.g. Royal Enfield 350, Bajaj Dominar">
+              <input id="vehicle" name="vehicle" placeholder="e.g. Royal Enfield 350, Bajaj Dominar" value="Royal Enfield Himalayan">
             </div>
           </div>
 
@@ -141,29 +142,29 @@
             <div class="field">
               <label for="pace">Riding pace</label>
               <select id="pace" name="pace">
-                <option value="relaxed">Relaxed - short daily distances</option>
-                <option value="moderate" selected>Moderate - 200-350 km/day</option>
-                <option value="fast">Fast - 350+ km/day</option>
+                <option value="relaxed">Relaxed — short daily distances</option>
+                <option value="moderate" selected>Moderate — 200–350 km/day</option>
+                <option value="fast">Fast — 350+ km/day</option>
               </select>
             </div>
             <div class="field">
               <label for="budget">Budget per day</label>
               <select id="budget" name="budget">
-                <option value="budget">Budget (INR 500-1500)</option>
-                <option value="mid" selected>Mid (INR 1500-3500)</option>
-                <option value="comfort">Comfort (INR 3500+)</option>
+                <option value="budget">Budget (₹500–1500)</option>
+                <option value="mid" selected>Mid (₹1500–3500)</option>
+                <option value="comfort">Comfort (₹3500+)</option>
               </select>
             </div>
           </div>
 
           <div class="field">
             <label for="habits">Your habits & preferences</label>
-            <textarea id="habits" name="habits" rows="3" placeholder="Early starter, no alcohol, fine with camping, prefer dhabas over restaurants, carry my own toolkit..."></textarea>
+            <textarea id="habits" name="habits" rows="3" placeholder="Early starter, no alcohol, fine with camping, prefer dhabas over restaurants, carry my own toolkit…">Early starter (5am), fine with wild camping, love roadside dhabas, carry toolkit, non-smoker, prefer riding with experienced riders.</textarea>
           </div>
 
           <div class="field">
             <label for="meetpoints">Possible meet-up points on route</label>
-            <input id="meetpoints" name="meetpoints" placeholder="e.g. Pune, Nashik, Manali">
+            <input id="meetpoints" name="meetpoints" placeholder="e.g. Pune, Nashik, Manali" value="Pune, Nashik, Manali, Keylong">
           </div>
 
           <button class="button primary full" id="publish-btn" type="submit">Publish my trip</button>
@@ -175,24 +176,24 @@
           <div class="trip-card-cover" id="trip-card-cover"></div>
           <div class="trip-card-body">
             <div class="trip-card-route">
-              <div class="route-pill from" id="tc-from">From</div>
+              <div class="route-pill from" id="tc-from">Mumbai</div>
               <div class="route-arrow">
                 <svg width="60" height="16" viewBox="0 0 60 16"><path d="M0 8h52M44 2l8 6-8 6" stroke="#1DB954" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
               </div>
-              <div class="route-pill to" id="tc-to">To</div>
+              <div class="route-pill to" id="tc-to">Ladakh</div>
             </div>
             <div class="trip-card-meta">
-              <span id="tc-dates">Not published yet</span>
-              <span id="tc-type">Trip type</span>
-              <span id="tc-vehicle">Vehicle / gear</span>
+              <span id="tc-dates">—</span>
+              <span id="tc-type">🏍️ Motorcycle</span>
+              <span id="tc-vehicle">Royal Enfield Himalayan</span>
             </div>
             <div class="trip-card-habits" id="tc-habits"></div>
             <div class="trip-card-meetpoints">
               <span class="meet-label">Meet-up points:</span>
-              <span id="tc-meetpoints">Add meet-up points</span>
+              <span id="tc-meetpoints">Pune, Nashik, Manali, Keylong</span>
             </div>
             <div class="trip-card-status">
-              <span class="status-dot"></span> Draft - publish when ready
+              <span class="status-dot"></span> Live — visible to other travelers
             </div>
           </div>
         </div>
@@ -205,7 +206,7 @@
       <div class="section-heading">
         <p class="eyebrow">Incoming requests</p>
         <h2>Riders who want to join your route.</h2>
-        <p>People going the same direction, from the same or different source. Accept to match and open a shared chat.</p>
+        <p>People going the same direction — from the same or different source. Accept to match and open a shared chat.</p>
       </div>
 
       <div class="request-list" id="request-list">
@@ -364,6 +365,22 @@
 
   </main>
 
+
+  <script>
+    // Logout
+    document.getElementById("nav-logout")?.addEventListener("click", async () => {
+      await fetch("/api/auth/logout", { method: "POST" });
+      window.location.href = "/login.html";
+    });
+
+    // Show logged-in user name in hero if available
+    fetch("/api/auth/me").then(r => r.json()).then(user => {
+      if (user && user.name) {
+        const hero = document.querySelector(".dashboard-hero h1");
+        if (hero) hero.textContent = `Hey, ${user.name.split(" ")[0]}. 👋`;
+      }
+    }).catch(() => {});
+  </script>
   <script src="script.js"></script>
   <script src="chat.js"></script>
 </body>

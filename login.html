@@ -18,26 +18,79 @@
       </a>
       <div>
         <p class="eyebrow">Welcome back</p>
-        <h1>Log in to your trip circle.</h1>
-        <p>Continue planning itineraries, reviewing matches, and coordinating upcoming travel crews.</p>
+        <h1>Back on the road.</h1>
+        <p>Log in to manage your trip, review new match requests, and chat with your riding crew.</p>
       </div>
     </section>
 
     <section class="auth-card" aria-label="Login form">
       <h2>Log in</h2>
-      <form class="auth-form" action="dashboard.html">
+
+      <div id="auth-error" style="display:none;padding:12px 14px;border-radius:8px;background:rgba(244,63,94,0.1);border:1px solid rgba(244,63,94,0.3);color:#f43f5e;font-size:0.88rem;font-weight:600;margin-bottom:14px"></div>
+
+      <form class="auth-form" id="login-form" novalidate>
         <div class="field">
           <label for="email">Email</label>
-          <input id="email" name="email" type="email" placeholder="you@example.com" required>
+          <input id="email" name="email" type="email" placeholder="you@example.com" required autocomplete="email">
         </div>
         <div class="field">
           <label for="password">Password</label>
-          <input id="password" name="password" type="password" placeholder="Your password" required>
+          <input id="password" name="password" type="password" placeholder="Your password" required autocomplete="current-password">
         </div>
-        <button class="button primary full" type="submit">Log in</button>
+        <button class="button primary full" type="submit" id="submit-btn">Log in</button>
       </form>
       <p class="auth-note">New here? <a href="signup.html">Create an account</a></p>
+      <p class="auth-note" style="margin-top:8px;font-size:0.8rem;color:#727272">
+        Testing locally without MongoDB? <a href="dashboard.html" style="color:#1DB954">Go to dashboard directly →</a>
+      </p>
     </section>
   </main>
+
+  <script>
+    // Show reason if redirected from a protected page
+    const params = new URLSearchParams(location.search);
+    if (params.get("reason") === "auth") {
+      const el = document.getElementById("auth-error");
+      el.style.display = "block";
+      el.textContent = "Please log in to access that page.";
+    }
+
+    document.getElementById("login-form").addEventListener("submit", async e => {
+      e.preventDefault();
+      const btn     = document.getElementById("submit-btn");
+      const errEl   = document.getElementById("auth-error");
+      const email   = document.getElementById("email").value.trim();
+      const password= document.getElementById("password").value.trim();
+
+      errEl.style.display = "none";
+      btn.textContent = "Logging in…";
+      btn.disabled = true;
+
+      try {
+        const res  = await fetch("/api/auth/login", {
+          method:  "POST",
+          headers: { "Content-Type": "application/json" },
+          body:    JSON.stringify({ email, password })
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+          errEl.textContent = data.error || "Login failed.";
+          errEl.style.display = "block";
+          btn.textContent = "Log in";
+          btn.disabled = false;
+          return;
+        }
+
+        // Logged in — redirect to dashboard
+        window.location.href = "/dashboard.html";
+      } catch {
+        errEl.textContent = "Network error — is the server running?";
+        errEl.style.display = "block";
+        btn.textContent = "Log in";
+        btn.disabled = false;
+      }
+    });
+  </script>
 </body>
 </html>

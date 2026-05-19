@@ -1,8 +1,12 @@
 {
-  "name": "roamcircle-ai-itineraries",
-  "version": "1.0.0",
+  "name": "roamcircle",
+  "version": "2.0.0",
   "private": true,
-  "scripts": {
-    "start": "node server.js"
+  "scripts": { "start": "node server.js" },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cookie": "^0.6.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongodb": "^6.5.0"
   }
 }

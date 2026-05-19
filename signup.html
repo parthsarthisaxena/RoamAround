@@ -3,111 +3,106 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Create account | RoamCircle</title>
-  <meta name="description" content="Create a RoamCircle account and set up your travel profile.">
+  <title>Sign up | RoamCircle</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;700;800&family=Fraunces:opsz,wght@9..144,700;9..144,800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body class="auth-page">
-  <main class="auth-layout signup-onboarding">
+  <main class="auth-layout">
     <section class="auth-panel signup">
       <a class="brand" href="index.html">
         <span class="brand-mark">R</span>
         <span>RoamCircle</span>
       </a>
       <div>
-        <p class="eyebrow">Create account</p>
-        <h1>Build your traveler profile first.</h1>
-        <p>RoamCircle uses these answers to publish your trip, recommend compatible travelers, and avoid fake assumptions.</p>
+        <p class="eyebrow">Start your journey</p>
+        <h1>Find your ride crew.</h1>
+        <p>Create your profile, publish your trip, and connect with riders heading the same way.</p>
       </div>
     </section>
 
-    <section class="auth-card onboarding-card" aria-label="Sign up form">
-      <h2>Sign up</h2>
-      <form class="auth-form" id="signup-form">
-        <div class="field-row">
-          <div class="field">
-            <label for="name">Full name</label>
-            <input id="name" name="name" placeholder="Your name" required>
-          </div>
-          <div class="field">
-            <label for="email">Email</label>
-            <input id="email" name="email" type="email" placeholder="you@example.com" required>
-          </div>
-        </div>
+    <section class="auth-card" aria-label="Sign up form">
+      <h2>Create account</h2>
 
+      <div id="auth-error" style="display:none;padding:12px 14px;border-radius:8px;background:rgba(244,63,94,0.1);border:1px solid rgba(244,63,94,0.3);color:#f43f5e;font-size:0.88rem;font-weight:600;margin-bottom:14px"></div>
+
+      <form class="auth-form" id="signup-form" novalidate>
         <div class="field">
-          <label for="password">Password</label>
-          <input id="password" name="password" type="password" placeholder="Create a password" required>
+          <label for="name">Full name</label>
+          <input id="name" name="name" placeholder="Your name" required autocomplete="name">
         </div>
-
-        <div class="form-section-label">Your first trip</div>
-        <div class="field-row">
-          <div class="field">
-            <label for="source">From</label>
-            <input id="source" name="source" placeholder="Mumbai" required>
-          </div>
-          <div class="field">
-            <label for="destination">To</label>
-            <input id="destination" name="destination" placeholder="Ladakh" required>
-          </div>
-        </div>
-
-        <div class="field-row">
-          <div class="field">
-            <label for="trip-type">Trip type</label>
-            <select id="trip-type" name="tripType">
-              <option value="motorcycle">Motorcycle ride</option>
-              <option value="roadtrip">Road trip</option>
-              <option value="cycling">Cycling</option>
-              <option value="hiking">Hiking / trekking</option>
-              <option value="backpacking">Backpacking</option>
-              <option value="train">Train journey</option>
-            </select>
-          </div>
-          <div class="field">
-            <label for="vehicle">Vehicle / gear</label>
-            <input id="vehicle" name="vehicle" placeholder="Royal Enfield 350, trekking gear...">
-          </div>
-        </div>
-
-        <div class="field-row">
-          <div class="field">
-            <label for="pace">Travel pace</label>
-            <select id="pace" name="pace">
-              <option value="relaxed">Relaxed</option>
-              <option value="moderate" selected>Moderate</option>
-              <option value="fast">Fast</option>
-            </select>
-          </div>
-          <div class="field">
-            <label for="budget">Budget per day</label>
-            <select id="budget" name="budget">
-              <option value="budget">Budget</option>
-              <option value="mid" selected>Mid</option>
-              <option value="comfort">Comfort</option>
-            </select>
-          </div>
-        </div>
-
         <div class="field">
-          <label for="habits">Habits and preferences</label>
-          <textarea id="habits" name="habits" rows="4" placeholder="Early starter, vegetarian, non-smoker, camping okay, prefers hotels, carries toolkit..."></textarea>
+          <label for="email">Email</label>
+          <input id="email" name="email" type="email" placeholder="you@example.com" required autocomplete="email">
         </div>
-
         <div class="field">
-          <label for="meetpoints">Possible meet-up points</label>
-          <input id="meetpoints" name="meetpoints" placeholder="Pune, Nashik, Manali">
+          <label for="password">Password <span style="color:#727272;font-weight:400">(min 8 chars)</span></label>
+          <input id="password" name="password" type="password" placeholder="Create a password" required autocomplete="new-password" minlength="8">
         </div>
-
-        <button class="button primary full" type="submit">Create account and continue</button>
+        <div class="field">
+          <label for="trip-type">Primary trip type</label>
+          <select id="trip-type" name="trip-type">
+            <option value="motorcycle">🏍️ Motorcycle rides</option>
+            <option value="roadtrip">🚗 Road trips</option>
+            <option value="cycling">🚴 Cycling tours</option>
+            <option value="hiking">🥾 Hiking / trekking</option>
+            <option value="backpacking">🎒 Backpacking</option>
+          </select>
+        </div>
+        <button class="button primary full" type="submit" id="submit-btn">Create account</button>
       </form>
       <p class="auth-note">Already have an account? <a href="login.html">Log in</a></p>
     </section>
   </main>
 
-  <script src="script.js"></script>
+  <script>
+    document.getElementById("signup-form").addEventListener("submit", async e => {
+      e.preventDefault();
+      const btn      = document.getElementById("submit-btn");
+      const errEl    = document.getElementById("auth-error");
+      const name     = document.getElementById("name").value.trim();
+      const email    = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value.trim();
+      const tripType = document.getElementById("trip-type").value;
+
+      errEl.style.display = "none";
+
+      if (password.length < 8) {
+        errEl.textContent = "Password must be at least 8 characters.";
+        errEl.style.display = "block";
+        return;
+      }
+
+      btn.textContent = "Creating account…";
+      btn.disabled = true;
+
+      try {
+        const res  = await fetch("/api/auth/signup", {
+          method:  "POST",
+          headers: { "Content-Type": "application/json" },
+          body:    JSON.stringify({ name, email, password, tripType })
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+          errEl.textContent = data.error || "Signup failed.";
+          errEl.style.display = "block";
+          btn.textContent = "Create account";
+          btn.disabled = false;
+          return;
+        }
+
+        // Account created — redirect to dashboard
+        window.location.href = "/dashboard.html";
+      } catch {
+        errEl.textContent = "Network error — is the server running?";
+        errEl.style.display = "block";
+        btn.textContent = "Create account";
+        btn.disabled = false;
+      }
+    });
+  </script>
 </body>
 </html>
