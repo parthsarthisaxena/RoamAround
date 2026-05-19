@@ -591,7 +591,7 @@ p {
     var(--surface-1);
   border-bottom: 1px solid var(--line);
 }
-
+/*if you mad eit till here you are a real developer*/
 .dashboard-hero p { color: var(--text-sub); max-width: 680px; }
 
 /* ─── Dashboard matches ──────────────────────────────────── */
