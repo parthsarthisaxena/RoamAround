@@ -1,33 +1,36 @@
 # RoamCircle
 
-Find compatible travel partners for motorcycle rides, road trips, hikes, and more..
+Find compatible travel partners for motorcycle rides, road trips, hikes and more.
 
 ---
-hi
-## Step 1 — Prerequisites
 
-- Node.js v18+ (`node -v` to check)
-- MongoDB running locally **or** a free MongoDB Atlas cluster
+## Quick start
 
-### Start MongoDB locally (Mac/Linux)
+### 1. Prerequisites
+
+- **Node.js v18+** — check with `node -v`
+- **MongoDB** — local or Atlas (free tier)
+
+**Start MongoDB locally:**
 ```bash
-# Install via Homebrew (Mac)
-brew install mongodb-community
+# Mac
 brew services start mongodb-community
 
-# Or on Linux
+# Linux
 sudo systemctl start mongod
+
+# Windows — run in a separate terminal
+mongod --dbpath C:\data\db
 ```
 
-### Or use MongoDB Atlas (cloud, free tier)
-1. Go to https://www.mongodb.com/atlas
-2. Create a free cluster
-3. Get your connection string — looks like:
-   `mongodb+srv://username:password@cluster.mongodb.net`
+**Or use MongoDB Atlas (cloud, free):**
+1. https://www.mongodb.com/atlas → create free cluster
+2. Get your connection string:
+   `mongodb+srv://user:pass@cluster.mongodb.net`
 
 ---
 
-## Step 2 — Install dependencies
+### 2. Install dependencies
 
 ```bash
 npm install
@@ -35,95 +38,208 @@ npm install
 
 ---
 
-## Step 3 — Set environment variables
+### 3. Set environment variables and start
 
-**Option A — inline (quick)**
+**Windows PowerShell:**
 ```powershell
-# Windows PowerShell
-$env:MONGODB_URI="mongodb://127.0.0.1:27017"
-$env:JWT_SECRET="any-long-random-string-here"
-$env:OPENAI_API_KEY="sk-your-key-here"
+$env:MONGODB_URI   = "mongodb://127.0.0.1:27017"
+$env:JWT_SECRET    = "any-long-random-string-here"
+$env:OPENAI_API_KEY= "sk-..."          # optional
 npm start
 ```
 
+**Mac / Linux:**
 ```bash
-# Mac / Linux
 MONGODB_URI="mongodb://127.0.0.1:27017" \
 JWT_SECRET="any-long-random-string-here" \
-OPENAI_API_KEY="sk-your-key-here" \
+OPENAI_API_KEY="sk-..." \
 npm start
 ```
 
-**Option B — .env file**
+**Or use a .env file:**
 ```bash
 cp .env.example .env
-# Edit .env with your values
+# Edit .env, then:
 npm install dotenv
 node -r dotenv/config server.js
 ```
 
 ---
 
-## Step 4 — Open the app
+### 4. Open the app
 
 ```
 http://localhost:3000
 ```
 
-- Go to `/signup.html` — create an account
-- Your credentials are saved to MongoDB with a hashed password
-- A JWT cookie is set — you stay logged in for 7 days
-- `/dashboard.html` redirects to login if you're not authenticated
-- Log out clears the cookie
+Go to `/signup.html` → create an account → you're in.
 
 ---
 
-## What's stored in MongoDB
-
-**Collection: `users`**
-```json
-{
-  "_id": "ObjectId",
-  "name": "Your Name",
-  "email": "you@example.com",
-  "password": "$2b$12$...(bcrypt hash)",
-  "tripType": "motorcycle",
-  "createdAt": "2024-01-01T00:00:00.000Z"
-}
-```
-
----
-
-## Auth flow summary
-
-```
-Signup/Login → bcrypt verify → JWT created → httpOnly cookie set
-Every request → JWT decoded from cookie → user injected into request
-Protected pages → server checks JWT → redirect to /login.html if missing
-Log out → cookie cleared → JWT invalidated client-side
-```
-
----
-
-## Files
+## File structure
 
 | File | Purpose |
 |---|---|
-| `server.js` | Node HTTP server — auth routes + static serving |
-| `chat.js` | Chat panel, matches grid, request cards (client) |
-| `script.js` | AI trip planner (client) |
+| `server.js` | Node HTTP server — all API routes + static file serving |
+| `chat.js` | Client-side chat panel, matches grid, request cards |
+| `script.js` | Client-side AI trip planner |
 | `styles.css` | Global Spotify-dark styles |
 | `dashboard.css` | Dashboard component styles |
 | `dashboard.html` | Main app — publish trip, requests, matches, chat |
-| `login.html` | Login with real API call |
-| `signup.html` | Signup with real API call |
+| `login.html` | Real login with API call + error messages |
+| `signup.html` | Real signup with API call + validation |
+| `profile-arjun.html` | Arjun's rider profile |
+| `profile-priya.html` | Priya's rider profile |
+| `profile-rohan.html` | Rohan's rider profile |
+| `.env.example` | Environment variable template |
 
 ---
 
-## Coming next (Step 2)
+## MongoDB collections
 
-- Store published trips in MongoDB
-- Store accepted matches in MongoDB
-- Store chat messages in MongoDB
-- Real-time matching by route/destination
+| Collection | What's stored |
+|---|---|
+| `users` | Name, email, bcrypt password hash, trip type, created date |
+| `trips` | Published trip per user (upserted — one per account) |
+| `matches` | Accept/reject state per user + requester pair |
+| `messages` | All chat messages, indexed by threadId + createdAt |
+
+---
+
+## API routes
+
+### Auth
+| Method | Route | Description |
+|---|---|---|
+| POST | `/api/auth/signup` | Create account, set JWT cookie |
+| POST | `/api/auth/login` | Verify credentials, set JWT cookie |
+| POST | `/api/auth/logout` | Clear JWT cookie |
+| GET | `/api/auth/me` | Return current user from JWT |
+
+### Trips
+| Method | Route | Description |
+|---|---|---|
+| POST | `/api/trips` | Publish or update my trip |
+| GET | `/api/trips/mine` | Fetch my saved trip |
+
+### Matches
+| Method | Route | Description |
+|---|---|---|
+| GET | `/api/matches` | Get all my accept/reject states |
+| POST | `/api/matches/:requesterId` | Accept or reject a request |
+
+### Messages
+| Method | Route | Description |
+|---|---|---|
+| GET | `/api/messages/:threadId` | Get all messages in a thread |
+| POST | `/api/messages/:threadId` | Send a message |
+
+### AI
+| Method | Route | Description |
+|---|---|---|
+| POST | `/api/itinerary` | Generate AI trip plan (auth required) |
+
+---
+
+## Auth flow
+
+```
+Signup/Login
+  → bcrypt hash verified
+  → JWT signed (7 day expiry)
+  → httpOnly cookie set (not readable by JS)
+
+Every page load
+  → Server reads JWT from cookie
+  → Protected pages redirect to /login.html if no valid token
+
+Logout
+  → Cookie cleared
+  → Client redirects to index
+```
+
+---
+
+## Security notes
+
+- Passwords hashed with bcrypt (12 salt rounds)
+- JWT stored in `httpOnly` cookie — XSS safe
+- `sameSite: lax` on cookie — CSRF protected
+- Thread IDs validated by ownership — users can only read their own messages
+- Bot/demo replies stored under `bot_{id}` prefix — never collide with real user IDs
+- CORS headers set on all responses — configurable via `CORS_ORIGIN` env var
+- Protected pages (`dashboard.html`, all profiles) server-side redirect if unauthenticated
+
+---
+
+## Bugs fixed (pre-Step 3)
+
+| # | Issue | Fix |
+|---|---|---|
+| 1 | Thread ID security hole | Strict `{ownerId}_` prefix ownership check |
+| 2 | Bot replies stored as user's ID | `botSender` param → stored as `bot_{id}` |
+| 3 | Reply index reset on re-login | Index derived from DB bot message count |
+| 4 | Expired session showed generic error | 401 includes `{ redirect }`, client navigates |
+| 5 | No loading state when chat opens | Spinner shown before DB fetch completes |
+| 6 | Form fields blank after page reload | Trip data from DB repopulates form inputs |
+| 7 | Race condition on userId resolution | `wireCards()` awaits `getMyUserId()` first |
+| 8 | Old Bali profiles in project | `profile-lea/maya/jun.html` deleted |
+| 9 | Old profiles not auth-protected | Added to `PROTECTED_PAGES` list |
+| 10 | No CORS headers | `setCORS()` on all responses + OPTIONS handler |
+
+---
+
+## Coming next — Step 3: Real matching
+
+- Query `trips` collection for users heading to the same destination
+- Show real registered users in request cards (not demo data)
+- Calculate match score from pace, budget, habits, date overlap
+- Mutual matching — both sides must accept
+
+
+---
+
+## Step 3 — Real matching (current)
+
+### New API routes
+
+| Method | Route | Description |
+|---|---|---|
+| `GET` | `/api/matches/suggestions` | Real users going same destination, ranked by score |
+| `GET` | `/api/matches/mutual` | Both sides accepted each other |
+| `GET` | `/api/trips/search?to=ladakh` | Search trips by destination |
+
+### Match score algorithm (0–100 pts)
+
+| Factor | Max pts | How |
+|---|---|---|
+| Date overlap | 30 | Proportional to how many days overlap with your trip |
+| Pace match | 25 | Exact=25, one step apart=12, opposite=0 |
+| Budget match | 25 | Exact=25, one step apart=12, opposite=0 |
+| Habit overlap | 20 | Jaccard similarity of habit keywords |
+
+### How real matching works
+
+1. You publish your trip (destination stored as `toLower` for case-insensitive search)
+2. `GET /api/matches/suggestions` queries `trips` where `toLower` matches yours
+3. Scores each candidate and returns ranked list (max 20)
+4. Already decided (accepted/rejected) users are excluded
+5. Real rider cards appear above demo cards in the request list
+6. Accepting a real user stores state in `matches` with `requesterType: "user"`
+7. `GET /api/matches/mutual` checks both sides accepted — required before real chat
+
+### Mutual matching
+- Accepting a **demo** traveler opens chat immediately (they always accept back)
+- Accepting a **real** user shows "Waiting for their accept" until mutual
+- Both sides must accept before a shared chat thread is usable in Step 4
+
+### New DB fields
+- `trips.toLower` — lowercased destination for case-insensitive matching
+- `matches.requesterType` — `"demo"` or `"user"` for easy filtering
+
+### Coming next — Step 4
+- Real-time notifications when someone accepts you back
+- Real user chat (mutual matches open a live thread)
+- Profile photo uploads
+- Push notifications via WebSocket
 

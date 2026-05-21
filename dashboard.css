@@ -699,3 +699,103 @@
   transition: color 0.15s, background 0.15s;
 }
 .nav-logout-btn:hover { color: #fff; background: rgba(255,255,255,0.08); }
+
+/* ── Step 3 — real riders / demo dividers ──────────────────── */
+.real-riders-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.real-riders-label::before,
+.real-riders-label::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: rgba(29,185,84,0.25);
+}
+
+.real-riders-label span {
+  color: #1DB954;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.demo-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 16px 0 8px;
+}
+
+.demo-divider::before,
+.demo-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: rgba(255,255,255,0.07);
+}
+
+.demo-divider span {
+  color: #727272;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* ── Match score badge variants ────────────────────────────── */
+.match-score.real {
+  background: rgba(56,189,248,0.1);
+  border-color: rgba(56,189,248,0.3);
+  color: #38bdf8;
+}
+
+/* ── Mutual match badge in matches grid ────────────────────── */
+.mpc-mutual-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 500px;
+  background: rgba(29,185,84,0.15);
+  border: 1px solid rgba(29,185,84,0.3);
+  color: #1DB954;
+  font-size: 0.7rem;
+  font-weight: 800;
+  margin-bottom: 8px;
+}
+
+.mpc-pending-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 500px;
+  background: rgba(245,158,11,0.12);
+  border: 1px solid rgba(245,158,11,0.3);
+  color: #f59e0b;
+  font-size: 0.7rem;
+  font-weight: 800;
+  margin-bottom: 8px;
+}
+
+/* ── No-trip published warning ─────────────────────────────── */
+.no-trip-notice {
+  padding: 16px 20px;
+  border-radius: 12px;
+  background: rgba(245,158,11,0.08);
+  border: 1px solid rgba(245,158,11,0.25);
+  color: #f59e0b;
+  font-size: 0.88rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}

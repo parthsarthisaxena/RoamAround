@@ -591,7 +591,7 @@ p {
     var(--surface-1);
   border-bottom: 1px solid var(--line);
 }
-/*if you mad eit till here you are a real developer*/
+
 .dashboard-hero p { color: var(--text-sub); max-width: 680px; }
 
 /* ─── Dashboard matches ──────────────────────────────────── */
@@ -833,21 +833,6 @@ textarea { min-height: 100px; resize: vertical; }
 .auth-note { margin: 16px 0 0; color: var(--text-sub); font-size: 0.88rem; }
 .auth-note a { color: var(--green); font-weight: 800; }
 .auth-note a:hover { color: var(--green-bright); text-decoration: underline; }
-
-.signup-onboarding {
-  grid-template-columns: minmax(320px, 0.82fr) minmax(420px, 1fr);
-  align-items: start;
-}
-
-.signup-onboarding .auth-panel {
-  position: sticky;
-  top: 28px;
-}
-
-.onboarding-card {
-  max-height: calc(100vh - 56px);
-  overflow: auto;
-}
 
 /* ─── Profile pages ──────────────────────────────────────── */
 .profile-page { max-width: 880px; margin: 0 auto; padding: 0 0 80px; background: var(--base); }
