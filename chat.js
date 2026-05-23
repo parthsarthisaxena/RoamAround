@@ -680,60 +680,68 @@ function renderRealCard(s, existingState) {
   if (document.querySelector(`[data-request-card="${s.userId}"]`)) return;
 
   const card = document.createElement("article");
-  card.className = "request-card";
-  card.dataset.requestCard      = s.userId;
-  card.dataset.travelerName     = s.userName;
-  card.dataset.travelerVehicle  = s.vehicle || "";
-  card.dataset.travelerDates    = `${s.startDate || ""} – ${s.endDate || ""}`;
+  card.className = "request-card real-rider-card";
+  card.dataset.requestCard     = s.userId;
+  card.dataset.travelerName    = s.userName;
+  card.dataset.travelerVehicle = s.vehicle || "";
+  card.dataset.travelerDates   = `${s.startDate || ""} – ${s.endDate || ""}`;
 
   const typeEmoji = { motorcycle:"🏍️", roadtrip:"🚗", cycling:"🚴", hiking:"🥾", backpacking:"🎒", train:"🚆" };
-  const emoji   = typeEmoji[s.tripType] || "🌍";
-  const habits  = (s.habits || "")
+  const emoji  = typeEmoji[s.tripType] || "🌍";
+  const habits = (s.habits || "")
     .split(/[,\.]+/).map(h => h.trim()).filter(Boolean).slice(0, 5)
     .map(h => `<div class="habit-tag">${esc(h)}</div>`).join("");
 
+  const proximityHtml = dateProximityLabel(s.startDate, s.endDate);
+  const nearbyHtml    = s.destinationMatch === "nearby"
+    ? '<span class="nearby-badge">📍 Nearby route</span>'
+    : "";
+
   card.innerHTML = `
-    <div class="req-cover" style="background:linear-gradient(135deg,rgba(29,185,84,0.25),rgba(0,0,0,0.6)),#1a1a2e;height:130px;position:relative">
-      <div style="position:absolute;inset:0;background:linear-gradient(to bottom,transparent 40%,#181818)"></div>
-    </div>
-    <div class="req-body">
-      <div class="req-top">
-        <div class="chat-avatar-fallback"
-             style="width:64px;height:64px;font-size:1.6rem;margin-top:-32px;
-                    flex-shrink:0;border:3px solid #181818;display:grid;place-items:center">
-          ${esc(s.userName?.[0] || "?")}
-        </div>
-        <div class="req-info">
-          <div class="req-name">
-            ${esc(s.userName)}
-            <span class="match-score">${s.score}% match</span>
-            <span class="match-score" style="background:rgba(56,189,248,0.1);border-color:rgba(56,189,248,0.3);color:#38bdf8">Real rider</span>
-          </div>
-          <div class="req-route">
-            <span class="from-pill">${esc(s.from || "?")}</span>
-            <svg width="28" height="10" viewBox="0 0 28 10">
-              <path d="M0 5h22M18 1l5 4-5 4" stroke="#1DB954" stroke-width="1.5" fill="none" stroke-linecap="round"/>
-            </svg>
-            <span class="to-pill">${esc(s.to || "?")}</span>
-          </div>
-          <div class="req-sub">
-            ${esc(s.startDate || "")} – ${esc(s.endDate || "")} · ${emoji} ${esc(s.vehicle || s.tripType || "")} · ${esc(s.pace || "")} pace
-          </div>
-          ${s.destinationMatch === "nearby"
-            ? '<div class="nearby-badge">📍 Nearby route — different destination wording</div>'
-            : ""}
-          ${dateProximityLabel(s.startDate, s.endDate)}
-        </div>
+    <div class="rrc-inner">
+      <!-- Left: avatar column -->
+      <div class="rrc-avatar-col">
+        <div class="rrc-avatar">${esc(s.userName?.[0] || "?")}</div>
+        <div class="rrc-score">${s.score}%</div>
       </div>
-      <div class="req-habits">${habits}</div>
-      <div class="req-details-grid">
-        <div><strong>Meet-up points</strong><p>${esc(s.meetpoints || "Not specified")}</p></div>
-        <div><strong>Budget</strong><p>${esc(s.budget || "Not specified")}</p></div>
-        <div><strong>Status</strong><p>Registered RoamCircle member</p></div>
-      </div>
-      <div class="request-actions" id="actions-${s.userId}">
-        <button class="button compact accept" type="button" data-request-action="accept">Accept</button>
-        <button class="button compact reject" type="button" data-request-action="reject">Decline</button>
+
+      <!-- Right: content column -->
+      <div class="rrc-content">
+        <div class="rrc-header">
+          <div class="rrc-name">${esc(s.userName)}</div>
+          <div class="rrc-badges">
+            <span class="match-score" style="background:rgba(56,189,248,0.1);border-color:rgba(56,189,248,0.3);color:#38bdf8;font-size:0.68rem">Real rider</span>
+            ${nearbyHtml}
+          </div>
+        </div>
+
+        <div class="rrc-route">
+          <span class="from-pill">${esc(s.from || "?")}</span>
+          <svg width="24" height="8" viewBox="0 0 24 8" style="flex-shrink:0">
+            <path d="M0 4h18M14 1l4 3-4 3" stroke="#1DB954" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+          </svg>
+          <span class="to-pill">${esc(s.to || "?")}</span>
+        </div>
+
+        <div class="rrc-meta">
+          ${emoji} ${esc(s.vehicle || s.tripType || "")} &nbsp;·&nbsp;
+          ${esc(s.startDate || "")} – ${esc(s.endDate || "")} &nbsp;·&nbsp;
+          ${esc(s.pace || "moderate")} pace
+        </div>
+
+        ${proximityHtml}
+
+        <div class="req-habits" style="margin:10px 0 6px">${habits}</div>
+
+        <div class="rrc-details">
+          <div><span class="rrc-detail-label">Meet-up points</span><span class="rrc-detail-val">${esc(s.meetpoints || "Not specified")}</span></div>
+          <div><span class="rrc-detail-label">Budget</span><span class="rrc-detail-val">${esc(s.budget || "mid")}</span></div>
+        </div>
+
+        <div class="request-actions" id="actions-${s.userId}">
+          <button class="button compact accept" type="button" data-request-action="accept">Accept</button>
+          <button class="button compact reject" type="button" data-request-action="reject">Decline</button>
+        </div>
       </div>
     </div>`;
 

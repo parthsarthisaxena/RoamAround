@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
   <title>Sign up | RoamCircle</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -94,7 +94,8 @@
           return;
         }
 
-        // Account created — redirect to dashboard
+        // Store token for WebSocket auth, then redirect
+        if (data.token) sessionStorage.setItem("rc_ws_token", data.token);
         window.location.href = "/dashboard.html";
       } catch {
         errEl.textContent = "Network error — is the server running?";

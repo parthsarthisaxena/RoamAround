@@ -2,13 +2,33 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
   <title>Dashboard | RoamCircle</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;700;800&family=Fraunces:opsz,wght@9..144,700;9..144,800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="dashboard.css">
+<style>
+    /* ── Mobile nav overflow fix ───────────────────────── */
+    @media (max-width: 600px) {
+      .topbar {
+        padding: 10px 12px;
+        gap: 8px;
+      }
+      .nav {
+        overflow-x: auto;
+        flex-wrap: nowrap;
+        padding-bottom: 2px;
+        max-width: calc(100vw - 120px);
+      }
+      .nav a, .nav-chat-btn, .nav-logout-btn {
+        white-space: nowrap;
+        flex-shrink: 0;
+      }
+      #notif-wrap { flex-shrink: 0; }
+    }
+</style>
 </head>
 <body>
 
