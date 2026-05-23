@@ -299,14 +299,30 @@ function scheduleReply(requesterId, tid) {
   }, delay);
 }
 
-// ── Open chat — Fix #3: works for both demo and real users ────
+// ── Open chat — works for both demo and real users ────────────
 async function openChat(requesterId) {
   active = requesterId;
   await getMyUserId();
 
   const isDemo = isDemoId(requesterId);
   const tv     = isDemo ? getDemoData(requesterId) : null;
-  const real   = !isDemo ? (realUserCache[requesterId] || null) : null;
+
+  // Fix #4 + #8 — if real user not in cache yet, fetch from /api/users/:id
+  if (!isDemo && !realUserCache[requesterId]) {
+    const { ok, data } = await apiGet(`/api/users/${encodeURIComponent(requesterId)}`);
+    if (ok && data.userId) {
+      realUserCache[requesterId] = {
+        userName:  data.userName,
+        from:      data.from,
+        to:        data.to,
+        vehicle:   data.vehicle,
+        startDate: data.startDate,
+        endDate:   data.endDate
+      };
+    }
+  }
+
+  const real = !isDemo ? (realUserCache[requesterId] || null) : null;
 
   // Determine display info
   const displayName = tv?.name || real?.userName || "Rider";
@@ -333,9 +349,12 @@ async function openChat(requesterId) {
   document.getElementById("chat-overlay")?.classList.add("open");
   document.body.style.overflow = "hidden";
   showChatLoading();
+  // Let realtime.js know which thread is open so it skips the notification
+  window._rcActiveThread = null; // will be set after threadId resolves
 
   const tid = await threadId(requesterId);
   if (!tid) { closeChat(); return; }
+  window._rcActiveThread = tid;
 
   let msgs = await loadMessages(tid);
 
@@ -372,6 +391,7 @@ function closeChat() {
   document.getElementById("typing-indicator")?.classList.remove("visible");
   document.body.style.overflow = "";
   active = null;
+  window._rcActiveThread = null;
 }
 
 // ── Build tabs — Fix #5: includes real accepted users ─────────
@@ -632,6 +652,28 @@ async function loadAndRenderSuggestions() {
   rebuildMatchesGrid(matchStates);
 }
 
+// Show a human-readable label for how close dates are
+function dateProximityLabel(theirStart, theirEnd) {
+  try {
+    const now  = new Date();
+    const ts   = new Date(theirStart);
+    const te   = new Date(theirEnd);
+    // Get my trip dates from the form inputs
+    const myStart = new Date(document.getElementById("start-date")?.value || "");
+    const myEnd   = new Date(document.getElementById("end-date")?.value   || "");
+    if (isNaN(myStart) || isNaN(myEnd) || isNaN(ts) || isNaN(te)) return "";
+
+    const overlapMs   = Math.min(myEnd, te) - Math.max(myStart, ts);
+    const overlapDays = Math.round(overlapMs / 86_400_000);
+
+    if (overlapDays >= 7)  return '<div class="date-badge good">✓ ' + overlapDays + ' days overlap</div>';
+    if (overlapDays >= 1)  return '<div class="date-badge ok">' + overlapDays + ' day overlap — manageable</div>';
+    if (overlapDays >= -3) return '<div class="date-badge close">⚡ Dates within 3 days — great meet-up window</div>';
+    if (overlapDays >= -7) return '<div class="date-badge warn">📅 ' + Math.abs(overlapDays) + ' day date gap — worth discussing</div>';
+    return '<div class="date-badge far">🗓️ ' + Math.abs(overlapDays) + ' day date gap</div>';
+  } catch { return ""; }
+}
+
 function renderRealCard(s, existingState) {
   const list = document.getElementById("request-list");
   if (!list) return;
@@ -677,6 +719,10 @@ function renderRealCard(s, existingState) {
           <div class="req-sub">
             ${esc(s.startDate || "")} – ${esc(s.endDate || "")} · ${emoji} ${esc(s.vehicle || s.tripType || "")} · ${esc(s.pace || "")} pace
           </div>
+          ${s.destinationMatch === "nearby"
+            ? '<div class="nearby-badge">📍 Nearby route — different destination wording</div>'
+            : ""}
+          ${dateProximityLabel(s.startDate, s.endDate)}
         </div>
       </div>
       <div class="req-habits">${habits}</div>
@@ -685,10 +731,10 @@ function renderRealCard(s, existingState) {
         <div><strong>Budget</strong><p>${esc(s.budget || "Not specified")}</p></div>
         <div><strong>Status</strong><p>Registered RoamCircle member</p></div>
       </div>
-    </div>
-    <div class="request-actions" id="actions-${s.userId}">
-      <button class="button compact accept" type="button" data-request-action="accept">Accept</button>
-      <button class="button compact reject" type="button" data-request-action="reject">Decline</button>
+      <div class="request-actions" id="actions-${s.userId}">
+        <button class="button compact accept" type="button" data-request-action="accept">Accept</button>
+        <button class="button compact reject" type="button" data-request-action="reject">Decline</button>
+      </div>
     </div>`;
 
   list.appendChild(card);
@@ -884,4 +930,68 @@ document.addEventListener("DOMContentLoaded", async () => {
   wireNav();
   wireTripForm();
   loadAndRenderSuggestions();
+  wireRealtimeEvents();  // Fix #10 — wire realtime.js custom events
 });
+
+// Fix #10 — handle events dispatched by realtime.js via CustomEvent
+// This guarantees chat.js is fully initialised before any handler runs
+function wireRealtimeEvents() {
+
+  // New match request arrived — refresh real suggestions list
+  document.addEventListener("rc:match_request", async () => {
+    await loadAndRenderSuggestions();
+  });
+
+  // Mutual match confirmed — rebuild matches grid with fresh state
+  document.addEventListener("rc:match_accepted", async e => {
+    const states = await loadMatchStates();
+    const rid    = e.detail?.requesterId;
+
+    // Add the new mutual match to cached states if not already there
+    if (rid && !states[rid]) {
+      states[rid] = "accept";
+      cacheSet("rc_matches", states);
+    }
+
+    // Fix #8 — hydrate realUserCache directly from /api/users/:id
+    // (suggestions API excludes already-decided users so it won't help here)
+    if (rid && !realUserCache[rid] && !isDemoId(rid)) {
+      const { ok, data } = await apiGet(`/api/users/${encodeURIComponent(rid)}`);
+      if (ok && data.userId) {
+        realUserCache[rid] = {
+          userName:  data.userName,
+          from:      data.from,
+          to:        data.to,
+          vehicle:   data.vehicle,
+          startDate: data.startDate,
+          endDate:   data.endDate
+        };
+      }
+    }
+
+    syncNav(states);
+    rebuildMatchesGrid(states);
+  });
+
+  // New message arrived in a thread
+  document.addEventListener("rc:new_message", async e => {
+    const event       = e.detail;
+    const panelEl     = document.getElementById("chat-panel");
+    const panelOpen   = panelEl?.classList.contains("open") ?? false;
+    const isActive    = panelOpen && window._rcActiveThread === event.threadId;
+
+    if (isActive) {
+      // Panel is open on this thread — reload messages silently
+      const requesterId = event.threadId.split("_").slice(1).join("_");
+      const msgs        = await loadMessages(event.threadId);
+      renderMsgs(msgs, requesterId);
+    }
+    // If not active, the notification bell handles it — nothing else needed here
+  });
+
+  // Open a specific chat thread (triggered by notification click)
+  document.addEventListener("rc:open_chat", e => {
+    const { requesterId } = e.detail || {};
+    if (requesterId) openChat(requesterId);
+  });
+}

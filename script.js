@@ -143,8 +143,8 @@ if (tripForm && plannerDays) {
     try {
       const plan = await fetchAI(input);
       renderPlan(plan);
-      if (plannerSource) plannerSource.textContent = "OpenAI";
-      if (plannerStatus) plannerStatus.textContent = "✓ Generated with AI.";
+      if (plannerSource) plannerSource.textContent = "Gemini";
+      if (plannerStatus) plannerStatus.textContent = "✓ Generated with Gemini.";
     } catch (err) {
       console.error("[planner]", err.message);
       renderPlan(buildDemo(input));

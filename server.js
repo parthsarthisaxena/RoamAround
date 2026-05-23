@@ -1,12 +1,14 @@
 /**
- * RoamCircle server.js — Step 3 (fully fixed)
+ * RoamCircle server.js — fully hardened
  *
- * Fixes applied:
- *  #1  Step 3 route handlers moved above main() — no hoisting confusion
- *  #4  handleMutualMatches — N+1 replaced with single $in query
- *  #7  trips.to indexes removed; toLower indexes kept (only field queried)
- *  #9  buildThreadId dead code removed
- *  #10 Password not trimmed before storage — spaces preserved, check on raw
+ * Fixes:
+ *  #1  All route handlers wrapped in try/catch around DB calls
+ *  #2  ObjectId validation before use — never throws raw
+ *  #3  Rate limiting on auth + token endpoints (in-memory)
+ *  #4  /api/users/:id endpoint so realtime.js can hydrate realUserCache
+ *  #6  toLower normalized on trip upsert (trim + lowercase)
+ *  #8  /api/users/:id returns safe public profile for cache hydration
+ *  #11 engines field added to package.json
  */
 
 "use strict";
@@ -16,17 +18,21 @@ const path      = require("node:path");
 const bcrypt    = require("bcryptjs");
 const jwt       = require("jsonwebtoken");
 const cookieLib = require("cookie");
-const { MongoClient } = require("mongodb");
+const { MongoClient, ObjectId } = require("mongodb");
+const { WebSocketServer, WebSocket } = require("ws");
 
 // ── Config ───────────────────────────────────────────────────
 const PORT        = Number(process.env.PORT        || 3000);
 const MONGODB_URI = process.env.MONGODB_URI        || "mongodb://127.0.0.1:27017";
 const JWT_SECRET  = process.env.JWT_SECRET         || "roamcircle-dev-secret-change-in-prod";
-const OPENAI_KEY  = process.env.OPENAI_API_KEY     || "";
+const GEMINI_KEY  = process.env.GEMINI_API_KEY      || "";
+const GEMINI_MODEL = process.env.GEMINI_MODEL        || "gemini-2.0-flash";
 const DB_NAME     = "roamcircle";
 const PUBLIC_DIR  = __dirname;
 const SALT_ROUNDS = 12;
 const JWT_TTL     = "7d";
+const WS_TTL      = "24h";
+const WS_HEARTBEAT_MS = 30_000;
 
 const ALLOWED_ORIGINS = new Set(
   (process.env.CORS_ORIGINS || `http://localhost:${PORT}`)
@@ -34,17 +40,58 @@ const ALLOWED_ORIGINS = new Set(
 );
 
 const PROTECTED_PAGES = [
-  "/dashboard.html",
-  "/profile-arjun.html",
-  "/profile-priya.html",
-  "/profile-rohan.html",
-  "/profile-lea.html",
-  "/profile-maya.html",
+  "/dashboard.html", "/profile-arjun.html", "/profile-priya.html",
+  "/profile-rohan.html", "/profile-lea.html", "/profile-maya.html",
   "/profile-jun.html"
 ];
 
 const DEMO_PREFIX = "demo_";
 const BOT_PREFIX  = "bot_";
+
+// ── Fix #3 — In-memory rate limiter ─────────────────────────
+// Map<ip, { count, resetAt }>
+const rateLimitStore = new Map();
+
+function rateLimit(req, res, maxRequests, windowMs) {
+  const ip  = req.headers["x-forwarded-for"]?.split(",")[0].trim()
+             || req.socket.remoteAddress
+             || "unknown";
+  const key = `${ip}:${req.url}`;
+  const now = Date.now();
+  const rec = rateLimitStore.get(key) || { count: 0, resetAt: now + windowMs };
+
+  if (now > rec.resetAt) {
+    rec.count   = 0;
+    rec.resetAt = now + windowMs;
+  }
+
+  rec.count++;
+  rateLimitStore.set(key, rec);
+
+  // Prune old entries every 500 requests to prevent memory leak
+  if (rateLimitStore.size > 5000) {
+    for (const [k, v] of rateLimitStore) {
+      if (now > v.resetAt) rateLimitStore.delete(k);
+    }
+  }
+
+  if (rec.count > maxRequests) {
+    sendJson(res, 429, {
+      error: "Too many requests. Please wait and try again.",
+      retryAfter: Math.ceil((rec.resetAt - now) / 1000)
+    });
+    return false; // blocked
+  }
+  return true; // allowed
+}
+
+// ── Fix #2 — Safe ObjectId helper ───────────────────────────
+function toObjectId(str) {
+  try {
+    if (!str || typeof str !== "string" || str.length !== 24) return null;
+    return new ObjectId(str);
+  } catch { return null; }
+}
 
 // ── MongoDB ──────────────────────────────────────────────────
 const mongo = new MongoClient(MONGODB_URI);
@@ -53,41 +100,29 @@ let db;
 async function connectDB() {
   await mongo.connect();
   db = mongo.db(DB_NAME);
-
   await db.collection("users").createIndex({ email: 1 }, { unique: true });
   await db.collection("trips").createIndex({ userId: 1 });
-
-  // Fix #7 — only toLower is queried, drop redundant to/to+isLive indexes
   await db.collection("trips").createIndex({ toLower: 1 });
   await db.collection("trips").createIndex({ toLower: 1, isLive: 1 });
-
   await db.collection("matches").createIndex(
     { userId: 1, requesterId: 1 }, { unique: true }
   );
-  // Fix #4 — index to support $in query in mutual matches
   await db.collection("matches").createIndex({ requesterId: 1, state: 1 });
-
   await db.collection("messages").createIndex({ threadId: 1, createdAt: 1 });
-
   console.log(`[db] MongoDB → ${MONGODB_URI}/${DB_NAME}`);
 }
 
 // ── MIME ─────────────────────────────────────────────────────
 const MIME = {
-  ".html": "text/html; charset=utf-8",
-  ".css":  "text/css; charset=utf-8",
-  ".js":   "application/javascript; charset=utf-8",
-  ".json": "application/json; charset=utf-8",
-  ".png":  "image/png",   ".jpg":  "image/jpeg",
-  ".jpeg": "image/jpeg",  ".svg":  "image/svg+xml"
+  ".html":"text/html; charset=utf-8", ".css":"text/css; charset=utf-8",
+  ".js":"application/javascript; charset=utf-8", ".json":"application/json; charset=utf-8",
+  ".png":"image/png", ".jpg":"image/jpeg", ".jpeg":"image/jpeg", ".svg":"image/svg+xml"
 };
 
 // ── HTTP helpers ─────────────────────────────────────────────
 function setCORS(res, req) {
-  const reqOrigin = req?.headers?.origin || "";
-  const origin    = ALLOWED_ORIGINS.has(reqOrigin)
-    ? reqOrigin
-    : [...ALLOWED_ORIGINS][0];
+  const o      = req?.headers?.origin || "";
+  const origin = ALLOWED_ORIGINS.has(o) ? o : [...ALLOWED_ORIGINS][0];
   res.setHeader("Access-Control-Allow-Origin",      origin);
   res.setHeader("Access-Control-Allow-Credentials", "true");
   res.setHeader("Access-Control-Allow-Methods",     "GET,POST,OPTIONS");
@@ -121,6 +156,21 @@ function readBody(req) {
   });
 }
 
+// ── Fix #1 — Generic DB error wrapper ───────────────────────
+// Wraps any route handler, catches DB/unexpected errors and returns 500
+function dbRoute(handler) {
+  return async (req, res, ...args) => {
+    try {
+      await handler(req, res, ...args);
+    } catch(e) {
+      console.error(`[route error] ${req.method} ${req.url}:`, e.message);
+      if (!res.headersSent) {
+        sendJson(res, 500, { error: "An unexpected server error occurred." }, req);
+      }
+    }
+  };
+}
+
 // ── Auth helpers ─────────────────────────────────────────────
 function getUser(req) {
   try {
@@ -140,7 +190,7 @@ function requireUser(req, res) {
 
 function makeAuthCookie(token) {
   return cookieLib.serialize("rc_token", token, {
-    httpOnly: true, sameSite: "lax", maxAge: 60 * 60 * 24 * 7, path: "/"
+    httpOnly: true, sameSite: "lax", maxAge: 60*60*24*7, path: "/"
   });
 }
 
@@ -150,7 +200,6 @@ function clearAuthCookie() {
   });
 }
 
-// ── Thread ownership ─────────────────────────────────────────
 function validateThreadOwnership(threadId, userId) {
   if (!threadId || !userId) return false;
   const sep = threadId.indexOf("_");
@@ -158,18 +207,110 @@ function validateThreadOwnership(threadId, userId) {
   return threadId.slice(0, sep) === userId;
 }
 
+// ── Fix #6 — Normalize destination string ───────────────────
+function normalizeDestination(raw) {
+  return String(raw || "").trim().toLowerCase()
+    .replace(/\s+/g, " "); // collapse multiple spaces
+}
+
+// Extract all significant words from a destination for partial matching
+// "Leh Ladakh" → ["leh", "ladakh"]
+// "Ladakh"     → ["ladakh"]
+function destinationWords(normalized) {
+  const stop = new Set(["to","in","via","and","the","of","a","an"]);
+  return normalized.split(" ").filter(w => w.length > 2 && !stop.has(w));
+}
+
+// Check if two normalized destinations share at least one significant word
+function destinationsOverlap(a, b) {
+  if (!a || !b) return false;
+  if (a === b) return true;                         // exact match
+  const wa = new Set(destinationWords(a));
+  const wb = destinationWords(b);
+  return wb.some(w => wa.has(w));                   // any shared word
+}
+
 // ════════════════════════════════════════════════════════════
-// AUTH
+// WEBSOCKET
 // ════════════════════════════════════════════════════════════
 
-async function handleSignup(req, res) {
-  let body;
-  try { body = await readBody(req); }
-  catch(e) { return sendJson(res, 400, { error: e.message }, req); }
+const connections = new Map();
 
+function wsRegister(userId, ws) {
+  if (!connections.has(userId)) connections.set(userId, new Set());
+  connections.get(userId).add(ws);
+}
+
+function wsUnregister(userId, ws) {
+  const set = connections.get(userId);
+  if (!set) return;
+  set.delete(ws);
+  if (set.size === 0) connections.delete(userId);
+}
+
+function push(userId, event) {
+  const set = connections.get(userId);
+  if (!set) return;
+  const payload = JSON.stringify(event);
+  for (const ws of set) {
+    if (ws.readyState === WebSocket.OPEN) ws.send(payload);
+  }
+}
+
+function setupWebSocket(server) {
+  const wss = new WebSocketServer({ server, path: "/ws" });
+
+  wss.on("connection", (ws, req) => {
+    const url   = new URL(req.url, `http://${req.headers.host}`);
+    const token = url.searchParams.get("token") || "";
+    let user;
+    try { user = jwt.verify(token, JWT_SECRET); }
+    catch { ws.close(4001, "Unauthorized"); return; }
+
+    ws.userId  = user.userId;
+    ws.isAlive = true;
+    wsRegister(user.userId, ws);
+    ws.send(JSON.stringify({ type: "connected", userId: user.userId, name: user.name }));
+    console.log(`[ws] + ${user.name} (online: ${connections.size})`);
+
+    ws.on("pong", () => { ws.isAlive = true; });
+    ws.on("message", raw => {
+      try { if (JSON.parse(raw).type === "ping") ws.send(JSON.stringify({ type: "pong" })); }
+      catch {}
+    });
+    ws.on("close", () => {
+      wsUnregister(user.userId, ws);
+      console.log(`[ws] - ${user.name} (online: ${connections.size})`);
+    });
+    ws.on("error", err => {
+      console.error("[ws] socket error:", err.message);
+      wsUnregister(user.userId, ws);
+    });
+  });
+
+  const heartbeat = setInterval(() => {
+    wss.clients.forEach(ws => {
+      if (!ws.isAlive) { wsUnregister(ws.userId, ws); return ws.terminate(); }
+      ws.isAlive = false;
+      ws.ping();
+    });
+  }, WS_HEARTBEAT_MS);
+
+  wss.on("close", () => clearInterval(heartbeat));
+  console.log(`[ws] ready at ws://localhost:${PORT}/ws`);
+}
+
+// ════════════════════════════════════════════════════════════
+// AUTH  (Fix #1 via dbRoute wrapper, Fix #3 rate limiting)
+// ════════════════════════════════════════════════════════════
+
+const handleSignup = dbRoute(async (req, res) => {
+  // Fix #3 — 5 signups per IP per 15 minutes
+  if (!rateLimit(req, res, 5, 15 * 60_000)) return;
+
+  const body     = await readBody(req);
   const name     = String(body.name     || "").trim();
   const email    = String(body.email    || "").trim().toLowerCase();
-  // Fix #10 — do NOT trim password; check length on raw value
   const password = String(body.password || "");
   const tripType = String(body.tripType || "motorcycle");
 
@@ -177,36 +318,44 @@ async function handleSignup(req, res) {
   if (!email || !email.includes("@")) return sendJson(res, 400, { error: "Valid email is required." }, req);
   if (password.length < 8)            return sendJson(res, 400, { error: "Password must be at least 8 characters." }, req);
 
-  try {
-    const hash   = await bcrypt.hash(password, SALT_ROUNDS);
-    const result = await db.collection("users").insertOne({
-      name, email, password: hash, tripType, createdAt: new Date()
-    });
-    const token = jwt.sign(
-      { userId: result.insertedId.toString(), name, email, tripType },
-      JWT_SECRET, { expiresIn: JWT_TTL }
-    );
-    setCORS(res, req);
-    res.writeHead(200, {
-      "Content-Type": "application/json; charset=utf-8",
-      "Set-Cookie":   makeAuthCookie(token)
-    });
-    res.end(JSON.stringify({ ok: true, name, email }));
-  } catch(e) {
-    if (e.code === 11000)
+  const hash   = await bcrypt.hash(password, SALT_ROUNDS);
+  const result = await db.collection("users").insertOne({
+    name, email, password: hash, tripType, createdAt: new Date()
+  }).catch(e => {
+    if (e.code === 11000) throw Object.assign(new Error("duplicate"), { isDuplicate: true });
+    throw e;
+  });
+
+  const token = jwt.sign(
+    { userId: result.insertedId.toString(), name, email, tripType },
+    JWT_SECRET, { expiresIn: JWT_TTL }
+  );
+  setCORS(res, req);
+  res.writeHead(200, {
+    "Content-Type": "application/json; charset=utf-8",
+    "Set-Cookie":   makeAuthCookie(token)
+  });
+  res.end(JSON.stringify({ ok: true, name, email, token }));
+});
+
+// Override dbRoute for signup to handle duplicate key gracefully
+const _handleSignup = handleSignup;
+async function wrappedSignup(req, res) {
+  try { await _handleSignup(req, res); }
+  catch(e) {
+    if (e.isDuplicate || e.code === 11000)
       return sendJson(res, 409, { error: "An account with this email already exists." }, req);
     console.error("[signup]", e.message);
     sendJson(res, 500, { error: "Could not create account." }, req);
   }
 }
 
-async function handleLogin(req, res) {
-  let body;
-  try { body = await readBody(req); }
-  catch(e) { return sendJson(res, 400, { error: e.message }, req); }
+const handleLogin = dbRoute(async (req, res) => {
+  // Fix #3 — 10 login attempts per IP per 15 minutes
+  if (!rateLimit(req, res, 10, 15 * 60_000)) return;
 
+  const body     = await readBody(req);
   const email    = String(body.email    || "").trim().toLowerCase();
-  // Fix #10 — don't trim password on login either
   const password = String(body.password || "");
 
   if (!email || !password)
@@ -225,8 +374,8 @@ async function handleLogin(req, res) {
     "Content-Type": "application/json; charset=utf-8",
     "Set-Cookie":   makeAuthCookie(token)
   });
-  res.end(JSON.stringify({ ok: true, name: user.name, email: user.email }));
-}
+  res.end(JSON.stringify({ ok: true, name: user.name, email: user.email, token }));
+});
 
 function handleLogout(req, res) {
   setCORS(res, req);
@@ -246,22 +395,76 @@ function handleMe(req, res) {
   );
 }
 
+const handleAuthToken = dbRoute(async (req, res) => {
+  // Fix #3 — 30 token refreshes per IP per hour
+  if (!rateLimit(req, res, 30, 60 * 60_000)) return;
+
+  const user = getUser(req);
+  if (!user) return sendJson(res, 401, { error: "Not authenticated." }, req);
+
+  const token = jwt.sign(
+    { userId: user.userId, name: user.name, email: user.email, tripType: user.tripType },
+    JWT_SECRET, { expiresIn: WS_TTL }
+  );
+  sendJson(res, 200, { token }, req);
+});
+
 // ════════════════════════════════════════════════════════════
-// TRIPS
+// USERS  (Fix #4 + #8 — public profile endpoint)
 // ════════════════════════════════════════════════════════════
 
-async function handleTripPost(req, res) {
+// GET /api/users/:userId — public profile for realUserCache hydration
+// Returns only safe fields — never password, email, or private data
+const handleUserGet = dbRoute(async (req, res, userId) => {
+  const caller = requireUser(req, res); if (!caller) return;
+
+  // Fix #2 — validate ObjectId before use
+  const oid = toObjectId(userId);
+  if (!oid) return sendJson(res, 400, { error: "Invalid user ID." }, req);
+
+  const user = await db.collection("users").findOne(
+    { _id: oid },
+    { projection: { name: 1, tripType: 1, createdAt: 1 } }
+  );
+
+  if (!user) return sendJson(res, 404, { error: "User not found." }, req);
+
+  // Also fetch their trip for route info
+  const trip = await db.collection("trips").findOne(
+    { userId: userId, isLive: true },
+    { projection: { from: 1, to: 1, startDate: 1, endDate: 1, vehicle: 1, pace: 1, tripType: 1 } }
+  );
+
+  sendJson(res, 200, {
+    userId:   userId,
+    userName: user.name,
+    tripType: user.tripType,
+    from:     trip?.from      || "",
+    to:       trip?.to        || "",
+    startDate: trip?.startDate || "",
+    endDate:   trip?.endDate   || "",
+    vehicle:   trip?.vehicle   || "",
+    pace:      trip?.pace      || ""
+  }, req);
+});
+
+// ════════════════════════════════════════════════════════════
+// TRIPS  (Fix #1 + #6)
+// ════════════════════════════════════════════════════════════
+
+const handleTripPost = dbRoute(async (req, res) => {
   const user = requireUser(req, res); if (!user) return;
-  let body;
-  try { body = await readBody(req); }
-  catch(e) { return sendJson(res, 400, { error: e.message }, req); }
+  const body = await readBody(req);
+
+  const destination = String(body.destination || "").trim();
+  if (!destination) return sendJson(res, 400, { error: "Destination is required." }, req);
 
   const tripDoc = {
     userId:     user.userId,
     userName:   user.name,
     from:       String(body.source      || "").trim(),
-    to:         String(body.destination || "").trim(),
-    toLower:    String(body.destination || "").trim().toLowerCase(),
+    to:         destination,
+    toLower:    normalizeDestination(destination),  // Fix #6
     startDate:  String(body.startDate   || "").trim(),
     endDate:    String(body.endDate     || "").trim(),
     tripType:   String(body.tripType    || "motorcycle"),
@@ -274,8 +477,6 @@ async function handleTripPost(req, res) {
     isLive:     true
   };
 
-  if (!tripDoc.to) return sendJson(res, 400, { error: "Destination is required." }, req);
-
   await db.collection("trips").updateOne(
     { userId: user.userId },
     { $set: tripDoc, $setOnInsert: { createdAt: new Date() } },
@@ -283,34 +484,34 @@ async function handleTripPost(req, res) {
   );
 
   sendJson(res, 200, { ok: true, trip: tripDoc }, req);
-}
+});
 
-async function handleTripGet(req, res) {
+// Fix #1 — wrapped in dbRoute
+const handleTripGet = dbRoute(async (req, res) => {
   const user = requireUser(req, res); if (!user) return;
   const trip = await db.collection("trips").findOne({ userId: user.userId });
   sendJson(res, 200, { trip: trip || null }, req);
-}
+});
 
 // ════════════════════════════════════════════════════════════
-// MATCHES
+// MATCHES  (Fix #1 + #2)
 // ════════════════════════════════════════════════════════════
 
-async function handleMatchesGet(req, res) {
+// Fix #1 — wrapped in dbRoute
+const handleMatchesGet = dbRoute(async (req, res) => {
   const user = requireUser(req, res); if (!user) return;
   const rows = await db.collection("matches").find({ userId: user.userId }).toArray();
   const map  = {};
   rows.forEach(m => { map[m.requesterId] = m.state; });
   sendJson(res, 200, { matches: map }, req);
-}
+});
 
-async function handleMatchPost(req, res, requesterId) {
+const handleMatchPost = dbRoute(async (req, res, requesterId) => {
   const user = requireUser(req, res); if (!user) return;
-  let body;
-  try { body = await readBody(req); }
-  catch(e) { return sendJson(res, 400, { error: e.message }, req); }
-
+  const body  = await readBody(req);
   const state = String(body.action || "").trim();
-  if (!["accept", "reject"].includes(state))
+
+  if (!["accept","reject"].includes(state))
     return sendJson(res, 400, { error: "action must be 'accept' or 'reject'." }, req);
 
   const requesterType = requesterId.startsWith(DEMO_PREFIX) ? "demo" : "user";
@@ -324,14 +525,36 @@ async function handleMatchPost(req, res, requesterId) {
     { upsert: true }
   );
 
+  if (state === "accept" && !requesterId.startsWith(DEMO_PREFIX)) {
+    push(requesterId, {
+      type: "match_request", from: user.userId, fromName: user.name, requesterId: user.userId
+    });
+
+    const theyAccepted = await db.collection("matches").findOne({
+      userId: requesterId, requesterId: user.userId, state: "accept"
+    });
+
+    if (theyAccepted) {
+      // Fix #2 — safe ObjectId conversion
+      const oid       = toObjectId(requesterId);
+      const otherUser = oid
+        ? await db.collection("users").findOne({ _id: oid }, { projection: { name: 1 } })
+        : null;
+      const otherName = otherUser?.name || "Your match";
+
+      push(user.userId,   { type: "match_accepted", from: requesterId,   fromName: otherName,  requesterId });
+      push(requesterId,   { type: "match_accepted", from: user.userId,   fromName: user.name,  requesterId: user.userId });
+    }
+  }
+
   sendJson(res, 200, { ok: true, requesterId, state }, req);
-}
+});
 
 // ════════════════════════════════════════════════════════════
-// MESSAGES
+// MESSAGES  (Fix #1)
 // ════════════════════════════════════════════════════════════
 
-async function handleMessagesGet(req, res, threadId) {
+const handleMessagesGet = dbRoute(async (req, res, threadId) => {
   const user = requireUser(req, res); if (!user) return;
   if (!validateThreadOwnership(threadId, user.userId))
     return sendJson(res, 403, { error: "Access denied." }, req);
@@ -342,94 +565,97 @@ async function handleMessagesGet(req, res, threadId) {
     .toArray();
 
   sendJson(res, 200, { messages }, req);
-}
+});
 
-async function handleMessagePost(req, res, threadId) {
+const handleMessagePost = dbRoute(async (req, res, threadId) => {
   const user = requireUser(req, res); if (!user) return;
   if (!validateThreadOwnership(threadId, user.userId))
     return sendJson(res, 403, { error: "Access denied." }, req);
 
-  let body;
-  try { body = await readBody(req); }
-  catch(e) { return sendJson(res, 400, { error: e.message }, req); }
-
-  const text     = String(body.text || "").trim();
-  const type     = String(body.type || "text");
-  const meta     = (typeof body.meta === "object" && body.meta !== null) ? body.meta : {};
+  const body      = await readBody(req);
+  const text      = String(body.text || "").trim();
+  const type      = String(body.type || "text");
+  const meta      = (typeof body.meta === "object" && body.meta !== null) ? body.meta : {};
   const rawSender = body.botSender
     ? `${BOT_PREFIX}${String(body.botSender).replace(/^bot_/, "")}`
     : null;
-  const from     = rawSender || user.userId;
-  const fromName = rawSender ? String(body.botName || "Traveler").trim() : user.name;
+  const from      = rawSender || user.userId;
+  const fromName  = rawSender ? String(body.botName || "Traveler").trim() : user.name;
 
   if (type === "text" && !text)
     return sendJson(res, 400, { error: "Message text is required." }, req);
 
   const msg    = { threadId, from, fromName, text, type, meta, createdAt: new Date() };
   const result = await db.collection("messages").insertOne(msg);
+
+  // Fix #5 — skip self-notification
+  const ownerUserId = threadId.split("_")[0];
+  if (ownerUserId !== from) {
+    push(ownerUserId, {
+      type: "new_message", threadId, from, fromName,
+      text: type === "text" ? text : `[${type}]`,
+      msgType: type, meta, ts: msg.createdAt.toISOString()
+    });
+  }
+
   sendJson(res, 201, { ok: true, message: { ...msg, _id: result.insertedId } }, req);
-}
+});
 
 // ════════════════════════════════════════════════════════════
-// STEP 3 — MATCHING
+// MATCHING  (Fix #1 + #5 destination normalization)
 // ════════════════════════════════════════════════════════════
 
 const PACE_RANK   = { relaxed: 0, moderate: 1, fast: 2 };
 const BUDGET_RANK = { budget: 0, mid: 1, comfort: 2 };
 
 function extractHabitWords(habits) {
-  const stop = new Set(["and","the","a","i","to","in","with","for",
-                        "is","am","are","im","its","of","on","at"]);
+  const stop = new Set(["and","the","a","i","to","in","with","for","is","am","are","im","its","of","on","at"]);
   return new Set(
-    habits.toLowerCase()
-      .replace(/[^a-z0-9\s]/g, " ")
-      .split(/\s+/)
+    habits.toLowerCase().replace(/[^a-z0-9\s]/g," ").split(/\s+/)
       .filter(w => w.length > 2 && !stop.has(w))
   );
 }
 
 function scoreCompatibility(myTrip, theirTrip) {
   let score = 0;
-
-  // Date overlap — 0–30 pts
   try {
-    const ms = new Date(myTrip.startDate),   me = new Date(myTrip.endDate);
+    const ms = new Date(myTrip.startDate), me = new Date(myTrip.endDate);
     const ts = new Date(theirTrip.startDate), te = new Date(theirTrip.endDate);
     if (!isNaN(ms) && !isNaN(me) && !isNaN(ts) && !isNaN(te)) {
-      const overlapDays = Math.max(0,
-        (Math.min(me, te) - Math.max(ms, ts)) / 86_400_000
-      );
-      const myDays = Math.max(1, (me - ms) / 86_400_000);
-      score += Math.min(30, Math.round((overlapDays / myDays) * 30));
+      const overlapMs   = Math.min(me,te) - Math.max(ms,ts);
+      const overlapDays = overlapMs / 86_400_000;
+
+      if (overlapDays >= 0) {
+        // Dates overlap — score proportionally (max 30 pts)
+        score += Math.min(30, Math.round((overlapDays / Math.max(1,(me-ms)/86_400_000)) * 30));
+      } else {
+        // Dates don't overlap — give partial credit based on proximity
+        // Within 3 days gap  → 15 pts (easily adjustable, great meet-up candidates)
+        // Within 7 days gap  → 8 pts  (worth showing, can plan early/late arrival)
+        // Within 14 days gap → 3 pts  (stretch, but still show them)
+        // Beyond 14 days     → 0 pts
+        const gapDays = Math.abs(overlapDays);
+        if      (gapDays <= 3)  score += 15;
+        else if (gapDays <= 7)  score += 8;
+        else if (gapDays <= 14) score += 3;
+        // else 0 — too far apart
+      }
     }
-  } catch { /* ignore */ }
-
-  // Pace — 0–25 pts
-  const paceDiff = Math.abs((PACE_RANK[myTrip.pace] ?? 1) - (PACE_RANK[theirTrip.pace] ?? 1));
-  score += paceDiff === 0 ? 25 : paceDiff === 1 ? 12 : 0;
-
-  // Budget — 0–25 pts
-  const budgetDiff = Math.abs(
-    (BUDGET_RANK[myTrip.budget] ?? 1) - (BUDGET_RANK[theirTrip.budget] ?? 1)
-  );
-  score += budgetDiff === 0 ? 25 : budgetDiff === 1 ? 12 : 0;
-
-  // Habit overlap — 0–20 pts
-  const myW = extractHabitWords(myTrip.habits || "");
-  const thW = extractHabitWords(theirTrip.habits || "");
+  } catch {}
+  const pd = Math.abs((PACE_RANK[myTrip.pace]??1)   - (PACE_RANK[theirTrip.pace]??1));
+  score += pd===0 ? 25 : pd===1 ? 12 : 0;
+  const bd = Math.abs((BUDGET_RANK[myTrip.budget]??1) - (BUDGET_RANK[theirTrip.budget]??1));
+  score += bd===0 ? 25 : bd===1 ? 12 : 0;
+  const myW = extractHabitWords(myTrip.habits||""), thW = extractHabitWords(theirTrip.habits||"");
   if (myW.size > 0 && thW.size > 0) {
-    const shared = [...myW].filter(w => thW.has(w)).length;
-    const union  = new Set([...myW, ...thW]).size;
-    score += Math.round((shared / union) * 20);
-  } else {
-    score += 10;
-  }
-
+    const shared = [...myW].filter(w=>thW.has(w)).length;
+    score += Math.round((shared / new Set([...myW,...thW]).size) * 20);
+  } else { score += 10; }
   return Math.min(100, score);
 }
 
-// GET /api/matches/suggestions
-async function handleMatchSuggestions(req, res) {
+// Fix #1 — all wrapped in dbRoute
+const handleMatchSuggestions = dbRoute(async (req, res) => {
   const user = requireUser(req, res); if (!user) return;
 
   const myTrip = await db.collection("trips").findOne({ userId: user.userId });
@@ -439,65 +665,82 @@ async function handleMatchSuggestions(req, res) {
   const myMatches  = await db.collection("matches").find({ userId: user.userId }).toArray();
   const decidedIds = new Set(myMatches.map(m => m.requesterId));
 
-  const candidates = await db.collection("trips").find({
-    toLower: myTrip.toLower,
-    isLive:  true,
-    userId:  { $ne: user.userId }
+  // Step 1: exact destination match
+  const exactCandidates = await db.collection("trips").find({
+    toLower: myTrip.toLower, isLive: true, userId: { $ne: user.userId }
   }).toArray();
 
-  const suggestions = candidates
+  // Step 2: fuzzy destination match — find trips sharing at least one
+  // significant word with the user's destination (e.g. "Ladakh" matches "Leh Ladakh")
+  const myWords    = destinationWords(myTrip.toLower);
+  let allCandidates = exactCandidates;
+
+  if (myWords.length > 0) {
+    // Build regex: any trip whose toLower contains any of my destination words
+    const wordPattern = myWords.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
+    const fuzzyRegex  = new RegExp(wordPattern, "i");
+
+    const fuzzyCandidates = await db.collection("trips").find({
+      toLower: { $regex: fuzzyRegex },
+      isLive:  true,
+      userId:  { $ne: user.userId }
+    }).toArray();
+
+    // Merge — deduplicate by userId
+    const seen = new Set(exactCandidates.map(t => t.userId));
+    for (const t of fuzzyCandidates) {
+      if (!seen.has(t.userId)) {
+        allCandidates.push(t);
+        seen.add(t.userId);
+      }
+    }
+  }
+
+  const suggestions = allCandidates
     .filter(t => !decidedIds.has(t.userId))
     .map(t => ({
       userId: t.userId, userName: t.userName,
-      from: t.from, to: t.to,
-      startDate: t.startDate, endDate: t.endDate,
-      tripType: t.tripType, vehicle: t.vehicle,
-      pace: t.pace, budget: t.budget,
-      habits: t.habits, meetpoints: t.meetpoints,
-      score: scoreCompatibility(myTrip, t)
+      from: t.from, to: t.to, startDate: t.startDate, endDate: t.endDate,
+      tripType: t.tripType, vehicle: t.vehicle, pace: t.pace,
+      budget: t.budget, habits: t.habits, meetpoints: t.meetpoints,
+      score: scoreCompatibility(myTrip, t),
+      // Flag if destination was fuzzy-matched so UI can show "nearby route"
+      destinationMatch: t.toLower === myTrip.toLower ? "exact" : "nearby"
     }))
     .sort((a, b) => b.score - a.score)
     .slice(0, 20);
 
   sendJson(res, 200, { suggestions, myTrip }, req);
-}
+});
 
-// GET /api/trips/search?to=ladakh
-async function handleTripSearch(req, res) {
+const handleTripSearch = dbRoute(async (req, res) => {
   const user = requireUser(req, res); if (!user) return;
   const url  = new URL(req.url, `http://${req.headers.host}`);
-  const to   = (url.searchParams.get("to") || "").trim().toLowerCase();
+  // Fix #6 — normalize search term same way as stored
+  const to   = normalizeDestination(url.searchParams.get("to") || "");
   if (!to) return sendJson(res, 400, { error: "'to' query param required." }, req);
-
   const trips = await db.collection("trips").find({
     toLower: to, isLive: true, userId: { $ne: user.userId }
   }).toArray();
-
   sendJson(res, 200, { trips }, req);
-}
+});
 
-// GET /api/matches/mutual — Fix #4: single $in query instead of N+1
-async function handleMutualMatches(req, res) {
+const handleMutualMatches = dbRoute(async (req, res) => {
   const user = requireUser(req, res); if (!user) return;
 
-  // Everyone this user has accepted
-  const iAccepted = await db.collection("matches").find({
-    userId: user.userId, state: "accept"
-  }).toArray();
+  const iAccepted = await db.collection("matches")
+    .find({ userId: user.userId, state: "accept" })
+    .toArray();
 
   if (!iAccepted.length) return sendJson(res, 200, { mutual: [] }, req);
 
-  // Separate demo vs real
-  const demoAccepted = iAccepted.filter(m => m.requesterId.startsWith(DEMO_PREFIX));
+  const demoAccepted = iAccepted.filter(m =>  m.requesterId.startsWith(DEMO_PREFIX));
   const realAccepted = iAccepted.filter(m => !m.requesterId.startsWith(DEMO_PREFIX));
+  const realIds      = realAccepted.map(m => m.requesterId);
 
-  // Fix #4 — one $in query instead of one findOne per match
-  const realIds = realAccepted.map(m => m.requesterId);
   const theyAccepted = realIds.length
     ? await db.collection("matches").find({
-        userId:      { $in: realIds },
-        requesterId: user.userId,
-        state:       "accept"
+        userId: { $in: realIds }, requesterId: user.userId, state: "accept"
       }).toArray()
     : [];
 
@@ -511,7 +754,7 @@ async function handleMutualMatches(req, res) {
   ];
 
   sendJson(res, 200, { mutual }, req);
-}
+});
 
 // ════════════════════════════════════════════════════════════
 // AI ITINERARY
@@ -539,22 +782,18 @@ function itinerarySchema() {
   };
 }
 
-async function handleItinerary(req, res) {
+const handleItinerary = dbRoute(async (req, res) => {
   const user = requireUser(req, res); if (!user) return;
-  if (!OPENAI_KEY)
-    return sendJson(res, 500, { error: "OPENAI_API_KEY not configured." }, req);
+  if (!GEMINI_KEY) return sendJson(res, 500, { error: "GEMINI_API_KEY not configured." }, req);
 
-  let body;
-  try { body = await readBody(req); }
-  catch(e) { return sendJson(res, 400, { error: e.message }, req); }
-
+  const body    = await readBody(req);
   const from    = String(body.source      || "").trim();
   const to      = String(body.destination || "").trim();
   const days    = Math.min(Math.max(Number(body.days || 5), 1), 7);
-  const budget  = String(body.budget   || "mid");
-  const vehicle = String(body.vehicle  || "");
-  const habits  = String(body.habits   || "");
-  const type    = String(body.tripType || "motorcycle");
+  const budget  = String(body.budget      || "mid");
+  const vehicle = String(body.vehicle     || "");
+  const habits  = String(body.habits      || "");
+  const type    = String(body.tripType    || "motorcycle");
 
   if (!to) return sendJson(res, 400, { error: "Destination is required." }, req);
 
@@ -568,40 +807,41 @@ async function handleItinerary(req, res) {
     "Return only structured JSON matching the schema."
   ].filter(Boolean).join("\n");
 
-  try {
-    const resp = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${OPENAI_KEY}`,
-        "Content-Type":  "application/json"
-      },
-      body: JSON.stringify({
-        model: process.env.OPENAI_MODEL || "gpt-4o",
-        response_format: {
-          type: "json_schema",
-          json_schema: { name: "travel_plan", strict: true, schema: itinerarySchema() }
-        },
-        messages: [
-          { role: "system", content: "You are a travel route planner. Return only valid JSON." },
-          { role: "user",   content: prompt }
-        ]
-      })
-    });
+  // Gemini API — generateContent endpoint with JSON response schema
+  const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_KEY}`;
 
-    if (!resp.ok) {
-      const m = await resp.text();
-      return sendJson(res, 502, { error: `OpenAI ${resp.status}: ${m.slice(0, 120)}` }, req);
-    }
-    const data = await resp.json();
-    const raw  = data.choices?.[0]?.message?.content;
-    if (!raw) return sendJson(res, 502, { error: "OpenAI returned empty response." }, req);
-    try   { sendJson(res, 200, JSON.parse(raw), req); }
-    catch { sendJson(res, 502, { error: "OpenAI returned invalid JSON." }, req); }
-  } catch(e) {
-    console.error("[itinerary]", e.message);
-    sendJson(res, 500, { error: e.message }, req);
+  const resp = await fetch(geminiUrl, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      system_instruction: {
+        parts: [{ text: "You are a travel route planner. Return only valid JSON matching the schema exactly." }]
+      },
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: {
+        responseMimeType: "application/json",
+        responseSchema:   itinerarySchema()
+      }
+    })
+  });
+
+  if (!resp.ok) {
+    const m = await resp.text();
+    return sendJson(res, 502, { error: `Gemini ${resp.status}: ${m.slice(0, 120)}` }, req);
   }
-}
+
+  const data = await resp.json();
+
+  // Gemini response: candidates[0].content.parts[0].text
+  const raw = data.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!raw) {
+    const reason = data.candidates?.[0]?.finishReason || "unknown";
+    return sendJson(res, 502, { error: `Gemini returned empty response (finishReason: ${reason}).` }, req);
+  }
+
+  try   { sendJson(res, 200, JSON.parse(raw), req); }
+  catch { sendJson(res, 502, { error: "Gemini returned invalid JSON." }, req); }
+});
 
 // ════════════════════════════════════════════════════════════
 // STATIC FILES
@@ -629,29 +869,34 @@ async function handleStatic(req, res) {
 }
 
 // ════════════════════════════════════════════════════════════
-// ROUTER — Fix #1: all handlers defined before main()
+// ROUTER
 // ════════════════════════════════════════════════════════════
 
 function router(req, res) {
   const { method, url } = req;
   const urlPath = url.split("?")[0];
 
-  if (method === "OPTIONS") {
-    setCORS(res, req); res.writeHead(204); res.end(); return;
-  }
+  if (method === "OPTIONS") { setCORS(res, req); res.writeHead(204); res.end(); return; }
 
   // Auth
-  if (method === "POST" && urlPath === "/api/auth/signup")  return handleSignup(req, res);
+  if (method === "POST" && urlPath === "/api/auth/signup")  return wrappedSignup(req, res);
   if (method === "POST" && urlPath === "/api/auth/login")   return handleLogin(req, res);
   if (method === "POST" && urlPath === "/api/auth/logout")  return handleLogout(req, res);
   if (method === "GET"  && urlPath === "/api/auth/me")      return handleMe(req, res);
+  if (method === "GET"  && urlPath === "/api/auth/token")   return handleAuthToken(req, res);
+
+  // Users — Fix #4 + #8
+  if (method === "GET" && urlPath.startsWith("/api/users/")) {
+    const userId = decodeURIComponent(urlPath.slice("/api/users/".length));
+    return handleUserGet(req, res, userId);
+  }
 
   // Trips
   if (method === "POST" && urlPath === "/api/trips")        return handleTripPost(req, res);
   if (method === "GET"  && urlPath === "/api/trips/mine")   return handleTripGet(req, res);
   if (method === "GET"  && urlPath === "/api/trips/search") return handleTripSearch(req, res);
 
-  // Matches — specific routes BEFORE wildcard startsWith
+  // Matches — specific before wildcard
   if (method === "GET"  && urlPath === "/api/matches")             return handleMatchesGet(req, res);
   if (method === "GET"  && urlPath === "/api/matches/suggestions") return handleMatchSuggestions(req, res);
   if (method === "GET"  && urlPath === "/api/matches/mutual")      return handleMutualMatches(req, res);
@@ -680,42 +925,32 @@ function router(req, res) {
 // BOOT
 // ════════════════════════════════════════════════════════════
 
-process.on("unhandledRejection", reason => {
-  console.error("[unhandledRejection]", reason);
-});
+process.on("unhandledRejection", reason => console.error("[unhandledRejection]", reason));
+process.on("uncaughtException",  err    => { console.error("[uncaughtException]", err.message); process.exit(1); });
 
-process.on("uncaughtException", err => {
-  console.error("[uncaughtException]", err.message);
-  process.exit(1);
-});
-
-process.on("SIGTERM", async () => {
-  console.log("[shutdown] SIGTERM — closing MongoDB");
+async function shutdown(signal) {
+  console.log(`[shutdown] ${signal}`);
   await mongo.close().catch(() => {});
   process.exit(0);
-});
-
-process.on("SIGINT", async () => {
-  console.log("[shutdown] SIGINT — closing MongoDB");
-  await mongo.close().catch(() => {});
-  process.exit(0);
-});
+}
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("SIGINT",  () => shutdown("SIGINT"));
 
 async function main() {
-  try {
-    await connectDB();
-  } catch(e) {
+  try { await connectDB(); }
+  catch(e) {
     console.error("[db] MongoDB connection failed:", e.message);
-    console.error("     Start MongoDB: mongod --dbpath ~/data/db");
     process.exit(1);
   }
-
-  http.createServer(router).listen(PORT, () => {
+  const server = http.createServer(router);
+  setupWebSocket(server);
+  server.listen(PORT, () => {
     console.log(`\nRoamCircle → http://localhost:${PORT}`);
-    console.log(`MongoDB:    ${MONGODB_URI}`);
-    console.log(`JWT:        ${JWT_SECRET === "roamcircle-dev-secret-change-in-prod" ? "⚠️  default (set JWT_SECRET)" : "✓ custom"}`);
-    console.log(`OpenAI:     ${OPENAI_KEY ? "✓ key found" : "⚠️  not set"}`);
-    console.log(`CORS:       ${[...ALLOWED_ORIGINS].join(", ")}\n`);
+    console.log(`WebSocket  → ws://localhost:${PORT}/ws`);
+    console.log(`MongoDB:     ${MONGODB_URI}`);
+    console.log(`JWT:         ${JWT_SECRET === "roamcircle-dev-secret-change-in-prod" ? "⚠️  default" : "✓ custom"}`);
+    console.log(`Gemini:      ${GEMINI_KEY ? "✓ key found" : "⚠️  not set (AI planner disabled)"}`);
+    console.log(`CORS:        ${[...ALLOWED_ORIGINS].join(", ")}\n`);
   });
 }
 

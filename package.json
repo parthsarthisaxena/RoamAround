@@ -2,11 +2,19 @@
   "name": "roamcircle",
   "version": "2.0.0",
   "private": true,
-  "scripts": { "start": "node server.js" },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm":  ">=9.0.0"
+  },
+  "scripts": {
+    "start":  "node server.js",
+    "dev":    "node --watch server.js"
+  },
   "dependencies": {
-    "bcryptjs": "^2.4.3",
-    "cookie": "^0.6.0",
+    "bcryptjs":    "^2.4.3",
+    "cookie":      "^0.6.0",
     "jsonwebtoken": "^9.0.2",
-    "mongodb": "^6.5.0"
+    "mongodb":     "^6.5.0",
+    "ws":          "^8.17.0"
   }
 }

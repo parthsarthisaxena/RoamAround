@@ -67,6 +67,24 @@
         <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M20 2H4a2 2 0 0 0-2 2v18l4-4h14a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2z"/></svg>
         Chats <span class="nav-chat-count" id="nav-chat-count" hidden>0</span>
       </button>
+      <!-- Notification bell -->
+      <div id="notif-wrap" style="position:relative">
+        <button class="notif-bell-btn" id="notif-bell" aria-label="Notifications">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+            <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+          </svg>
+          <span id="notif-badge" class="notif-badge" hidden>0</span>
+          <span id="ws-status-dot" class="ws-dot" title="Connecting…"></span>
+        </button>
+        <div id="notif-dropdown" class="notif-dropdown">
+          <div class="notif-header">Notifications</div>
+          <div id="notif-list" class="notif-list">
+            <div class="notif-empty">No notifications yet</div>
+          </div>
+        </div>
+      </div>
       <button class="nav-logout-btn" id="nav-logout">Log out</button>
     </nav>
   </header>
@@ -259,10 +277,10 @@
               <div><strong>Experience</strong><p>4 long-distance rides. Leh–Manali done twice. Familiar with high-altitude riding.</p></div>
               <div><strong>Verification</strong><p>ID verified, 5 references, emergency contact added.</p></div>
             </div>
-          </div>
-          <div class="request-actions" id="actions-arjun">
-            <button class="button compact accept" type="button" data-request-action="accept">Accept</button>
-            <button class="button compact reject" type="button" data-request-action="reject">Decline</button>
+            <div class="request-actions" id="actions-arjun">
+              <button class="button compact accept" type="button" data-request-action="accept">Accept</button>
+              <button class="button compact reject" type="button" data-request-action="reject">Decline</button>
+            </div>
           </div>
         </article>
 
@@ -304,10 +322,10 @@
               <div><strong>Experience</strong><p>Spiti Valley done, Karnataka coastal route. First Ladakh trip but well-prepared.</p></div>
               <div><strong>Verification</strong><p>Photo verified, Instagram linked, 3 completed rides.</p></div>
             </div>
-          </div>
-          <div class="request-actions" id="actions-priya">
-            <button class="button compact accept" type="button" data-request-action="accept">Accept</button>
-            <button class="button compact reject" type="button" data-request-action="reject">Decline</button>
+            <div class="request-actions" id="actions-priya">
+              <button class="button compact accept" type="button" data-request-action="accept">Accept</button>
+              <button class="button compact reject" type="button" data-request-action="reject">Decline</button>
+            </div>
           </div>
         </article>
 
@@ -348,10 +366,10 @@
               <div><strong>Experience</strong><p>7 long-distance rides including Leh–Srinagar. Very experienced, fast-paced rider.</p></div>
               <div><strong>Verification</strong><p>Email verified, LinkedIn linked. Pace may differ — worth discussing first.</p></div>
             </div>
-          </div>
-          <div class="request-actions" id="actions-rohan">
-            <button class="button compact accept" type="button" data-request-action="accept">Accept</button>
-            <button class="button compact reject" type="button" data-request-action="reject">Decline</button>
+            <div class="request-actions" id="actions-rohan">
+              <button class="button compact accept" type="button" data-request-action="accept">Accept</button>
+              <button class="button compact reject" type="button" data-request-action="reject">Decline</button>
+            </div>
           </div>
         </article>
 
@@ -377,6 +395,13 @@
 
 
   <script>
+    // Pick up WS token stored at login and connect
+    const _wsToken = sessionStorage.getItem("rc_ws_token");
+    if (_wsToken && window.RC_setWsToken) {
+      sessionStorage.removeItem("rc_ws_token"); // use once
+      window.RC_setWsToken(_wsToken);
+    }
+
     // Logout
     document.getElementById("nav-logout")?.addEventListener("click", async () => {
       await fetch("/api/auth/logout", { method: "POST" });
@@ -391,6 +416,7 @@
       }
     }).catch(() => {});
   </script>
+  <script src="realtime.js"></script>
   <script src="script.js"></script>
   <script src="chat.js"></script>
 </body>
