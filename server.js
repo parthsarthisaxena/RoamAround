@@ -764,21 +764,38 @@ function itinerarySchema() {
   return {
     type: "object", additionalProperties: false,
     properties: {
-      title: { type: "string" }, summary: { type: "string" },
+      title:          { type: "string" },
+      summary:        { type: "string" },
+      insiderTip:     { type: "string" },
       days: {
-        type: "array", minItems: 1, maxItems: 7,
+        type: "array", minItems: 1, maxItems: 14,
         items: {
           type: "object", additionalProperties: false,
           properties: {
-            day: { type: "integer" }, title: { type: "string" },
-            description: { type: "string" }, morning: { type: "string" },
-            afternoon: { type: "string" }, evening: { type: "string" }
+            day:            { type: "integer" },
+            title:          { type: "string" },
+            from:           { type: "string" },
+            to:             { type: "string" },
+            distance:       { type: "string" },
+            rideCondition:  { type: "string" },
+            fuelStop:       { type: "string" },
+            sleepAt:        { type: "string" },
+            sleepType:      { type: "string" },
+            hiddenGem:      { type: "string" },
+            watchOut:       { type: "string" },
+            localFood:      { type: "string" },
+            permits:        { type: "string" },
+            altRoute:       { type: "string" }
           },
-          required: ["day","title","description","morning","afternoon","evening"]
+          required: [
+            "day","title","from","to","distance",
+            "rideCondition","fuelStop","sleepAt","sleepType",
+            "hiddenGem","watchOut","localFood"
+          ]
         }
       }
     },
-    required: ["title","summary","days"]
+    required: ["title","summary","insiderTip","days"]
   };
 }
 
@@ -797,15 +814,29 @@ const handleItinerary = dbRoute(async (req, res) => {
 
   if (!to) return sendJson(res, 400, { error: "Destination is required." }, req);
 
-  const prompt = [
-    "Create a realistic day-by-day travel route plan.",
-    from    ? `From: ${from}` : "",
-    `To: ${to}`, `Duration: ${days} days`, `Budget: ${budget}`,
-    `Trip type: ${type}`,
-    vehicle ? `Vehicle: ${vehicle}` : "",
-    habits  ? `Habits: ${habits}`   : "",
-    "Return only structured JSON matching the schema."
-  ].filter(Boolean).join("\n");
+  const prompt = `You are an experienced ${type} traveler who has done the ${from ? from + " to " + to : to} route multiple times. Generate an insider route plan that feels like advice from a local rider — NOT a generic travel blog.
+
+Route: ${from ? from + " → " + to : to}
+Duration: ${days} days
+Budget: ${budget}
+Trip type: ${type}
+${vehicle ? "Vehicle: " + vehicle : ""}
+${habits ? "Rider habits: " + habits : ""}
+
+For each day provide:
+- from/to: exact town names, not vague regions
+- distance: realistic km estimate for this vehicle and pace
+- rideCondition: actual road surface, traffic, altitude, seasonal hazards — be specific
+- fuelStop: name of the best/last reliable petrol pump before remote sections — critical info
+- sleepAt: specific guesthouse name or area known to riders, with reason why (e.g. "Hotel Snowland Keylong — popular with bikers, has secure parking, owner speaks English")
+- sleepType: "camping" / "guesthouse" / "dhaba-stay" / "homestay" / "hotel"
+- hiddenGem: one thing most tourists miss on this stretch — a viewpoint, chai spot, mechanic, shortcut, local experience
+- watchOut: a specific real danger or mistake riders make on this exact stretch (e.g. "loose gravel after Baralachala, trucks don't stop, start by 6am before winds pick up")
+- localFood: one specific dish or place to eat on this stretch that locals actually eat
+- permits: any permit, checkpoint, or registration needed on this day (or "none")
+- altRoute: an alternate road if conditions are bad or rider wants something different
+
+Be brutally honest about difficult sections. Skip generic advice. Every field should contain something a first-timer wouldn't easily find on a travel blog. Return only valid JSON.`;
 
   // Gemini API — generateContent endpoint with JSON response schema
   const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_KEY}`;

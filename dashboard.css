@@ -1236,3 +1236,184 @@
     justify-content: center;
   }
 }
+
+/* ── AI planner loading state ──────────────────────────────── */
+.planner-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 40px;
+}
+
+.planner-loading .typing-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #1DB954;
+  animation: typing-bounce 1.2s ease-in-out infinite;
+}
+
+.planner-loading .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+.planner-loading .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+
+/* AI planner section spacing */
+#ai-planner {
+  background:
+    radial-gradient(ellipse 50% 60% at 95% 5%, rgba(29,185,84,0.08), transparent),
+    var(--base);
+  border-top: 1px solid rgba(255,255,255,0.06);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+
+/* ── Rich day card styles ────────────────────────────────────── */
+.rich-day-card {
+  border-left: 3px solid #1DB954 !important;
+  padding: 0 !important;
+  overflow: hidden;
+}
+
+.dc-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 14px 16px 10px;
+  background: rgba(29,185,84,0.05);
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+.dc-day {
+  background: #1DB954;
+  color: #000;
+  font-size: 0.68rem;
+  font-weight: 800;
+  padding: 3px 10px;
+  border-radius: 500px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.dc-route-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.dc-from {
+  color: #b3b3b3;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.dc-to {
+  color: #fff;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.dc-distance {
+  color: #727272;
+  font-size: 0.75rem;
+  margin-left: auto;
+}
+
+.dc-title {
+  padding: 10px 16px 6px;
+  color: #fff;
+  font-weight: 800;
+  font-size: 0.95rem;
+  line-height: 1.4;
+}
+
+/* Info grid — 2 cols */
+.dc-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  background: rgba(255,255,255,0.04);
+  margin: 8px 16px;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.06);
+}
+
+.dc-item {
+  padding: 10px 12px;
+  background: #1a1a1a;
+}
+
+.dc-label {
+  color: #727272;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 4px;
+}
+
+.dc-val {
+  color: #b3b3b3;
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+/* Callout blocks */
+.dc-callout {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 0 16px 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+}
+
+.dc-callout.gem {
+  background: rgba(167,139,250,0.08);
+  border: 1px solid rgba(167,139,250,0.2);
+}
+
+.dc-callout.warn {
+  background: rgba(245,158,11,0.08);
+  border: 1px solid rgba(245,158,11,0.2);
+}
+
+.dc-callout-icon { font-size: 1.1rem; flex-shrink: 0; margin-top: 1px; }
+
+.dc-callout-label {
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 3px;
+}
+
+.dc-callout.gem .dc-callout-label  { color: #a78bfa; }
+.dc-callout.warn .dc-callout-label { color: #f59e0b; }
+
+.dc-callout-text {
+  color: #b3b3b3;
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+/* Insider tip banner */
+.planner-insider-tip {
+  margin: 0 0 16px;
+  padding: 12px 16px;
+  border-radius: 10px;
+  background: rgba(29,185,84,0.08);
+  border: 1px solid rgba(29,185,84,0.2);
+  color: #1DB954;
+  font-size: 0.85rem;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+/* Responsive — 1 col grid on mobile */
+@media (max-width: 500px) {
+  .dc-grid { grid-template-columns: 1fr; }
+  .dc-header { gap: 7px; }
+}

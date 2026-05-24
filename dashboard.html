@@ -81,6 +81,7 @@
     <a class="brand" href="index.html"><span class="brand-mark">R</span><span>RoamCircle</span></a>
     <nav class="nav" aria-label="Dashboard navigation">
       <a href="#my-trip">My trip</a>
+      <a href="#ai-planner">AI planner</a>
       <a href="#requests-section">Requests <span id="request-count" class="nav-badge">0</span></a>
       <a href="#matches-section">Matches</a>
       <button class="nav-chat-btn" id="nav-chat-btn">
@@ -236,6 +237,104 @@
           </div>
         </div>
 
+      </div>
+    </section>
+
+
+    <!-- ══ AI ROUTE PLANNER ══ -->
+    <section class="planner-zone" id="ai-planner">
+      <div class="section-heading">
+        <p class="eyebrow">AI route planner · Powered by Gemini</p>
+        <h2>Generate a day-by-day route plan.</h2>
+        <p>Fill in your trip details above and hit Generate, or customise below for a different route.</p>
+      </div>
+
+      <div class="planner-shell">
+        <!-- Planner form -->
+        <form class="planner-form" id="planner-form">
+          <div class="field-row">
+            <div class="field">
+              <label for="pl-source">From</label>
+              <input id="pl-source" name="source" placeholder="e.g. Mumbai" value="Mumbai">
+            </div>
+            <div class="field">
+              <label for="pl-destination">To</label>
+              <input id="pl-destination" name="destination" placeholder="e.g. Ladakh" value="Ladakh" required>
+            </div>
+          </div>
+
+          <div class="field-row">
+            <div class="field">
+              <label for="pl-days">Days</label>
+              <select id="pl-days" name="days">
+                <option value="3">3 days</option>
+                <option value="5" selected>5 days</option>
+                <option value="7">7 days</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="pl-budget">Budget</label>
+              <select id="pl-budget" name="budget">
+                <option value="budget">Budget</option>
+                <option value="mid" selected>Mid-range</option>
+                <option value="comfort">Comfort</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="field-row">
+            <div class="field">
+              <label for="pl-type">Trip type</label>
+              <select id="pl-type" name="trip-type">
+                <option value="motorcycle" selected>🏍️ Motorcycle</option>
+                <option value="roadtrip">🚗 Road trip</option>
+                <option value="cycling">🚴 Cycling</option>
+                <option value="hiking">🥾 Hiking</option>
+                <option value="backpacking">🎒 Backpacking</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="pl-vehicle">Vehicle / gear</label>
+              <input id="pl-vehicle" name="vehicle" placeholder="e.g. Royal Enfield Himalayan">
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="pl-habits">Riding style & preferences</label>
+            <textarea id="pl-habits" name="habits" rows="2"
+              placeholder="Early starter, fine with camping, love dhabas, carry toolkit…"></textarea>
+          </div>
+
+          <button class="button primary full" type="submit" id="planner-submit-btn">
+            ✨ Generate AI route plan
+          </button>
+          <p class="status" id="planner-status" aria-live="polite"></p>
+        </form>
+
+        <!-- Result panel -->
+        <section class="planner-result" aria-label="Generated route plan">
+          <div class="result-top">
+            <div>
+              <p class="eyebrow">Generated plan</p>
+              <h2 id="planner-title">Your route will appear here</h2>
+            </div>
+            <span class="badge" id="planner-source">Gemini</span>
+          </div>
+          <p id="planner-summary">Hit Generate to get a personalised day-by-day plan for your route.</p>
+          <div id="planner-insider-tip" class="planner-insider-tip" style="display:none"></div>
+          <div class="days" id="planner-days">
+            <article class="day-card">
+              <span>Day 1</span>
+              <strong>Leave early, reach first night stop before dark</strong>
+              <p>Cold engine start, fuel up, target 250 km before peak heat. Settle at a dhaba town.</p>
+            </article>
+            <article class="day-card">
+              <span>Day 2</span>
+              <strong>First mountain roads — pace through the ghats</strong>
+              <p>Winding roads, scenic stops every 60–80 km. Let the bike breathe on climbs.</p>
+            </article>
+          </div>
+        </section>
       </div>
     </section>
 
