@@ -108,7 +108,7 @@
       </div>
       <!-- Profile avatar dropdown -->
       <div id="profile-nav-wrap" style="position:relative">
-        <button class="nav-avatar-btn" id="nav-avatar-btn" aria-label="Profile menu">
+        <button class="nav-avatar-btn" id="nav-avatar-btn" aria-label="Profile menu" title="Profile & settings">
           <img id="nav-avatar-img" src="" alt="" style="display:none;width:34px;height:34px;border-radius:50%;object-fit:cover;border:2px solid rgba(29,185,84,0.5)">
           <div id="nav-avatar-fallback" class="nav-avatar-fallback">?</div>
         </button>
@@ -555,14 +555,28 @@
     // Profile avatar dropdown toggle
     const profileNavWrap = document.getElementById("profile-nav-wrap");
     const profileDropdown= document.getElementById("profile-dropdown");
-    document.getElementById("nav-avatar-btn")?.addEventListener("click", e => {
+    const navAvatarBtn = document.getElementById("nav-avatar-btn");
+    navAvatarBtn?.addEventListener("click", e => {
       e.stopPropagation();
-      profileDropdown?.classList.toggle("open");
+      e.preventDefault();
+      const isOpen = profileDropdown?.classList.contains("open");
+      // Close notif dropdown if open
+      document.getElementById("notif-dropdown")?.classList.remove("open");
+      // Toggle profile dropdown
+      if (isOpen) {
+        profileDropdown?.classList.remove("open");
+      } else {
+        profileDropdown?.classList.add("open");
+      }
     });
     document.addEventListener("click", e => {
-      if (!e.target.closest("#profile-nav-wrap")) {
+      if (!e.target.closest("#profile-nav-wrap") && !e.target.closest("#profile-dropdown")) {
         profileDropdown?.classList.remove("open");
       }
+    });
+    // Close on Escape key
+    document.addEventListener("keydown", e => {
+      if (e.key === "Escape") profileDropdown?.classList.remove("open");
     });
 
     // Load profile — populate avatar + hero greeting

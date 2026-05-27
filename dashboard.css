@@ -729,7 +729,7 @@
   .planner-shell        { grid-template-columns: 1fr; }
   .req-details-grid     { grid-template-columns: 1fr 1fr; }
   .matches-grid         { grid-template-columns: 1fr 1fr; }
-  .notif-dropdown       { width: min(300px, 90vw); right: -60px; }
+  .notif-dropdown       { width: min(300px, calc(100vw - 24px)); right: 12px; }
 }
 
 @media (max-width: 660px) {
@@ -759,7 +759,7 @@
   .chat-panel           { width: 100vw; }
 
   /* Notification dropdown */
-  .notif-dropdown       { width: 100vw; right: -12px; border-radius: 0 0 14px 14px; }
+  .notif-dropdown       { width: calc(100vw - 24px); right: 12px; border-radius: 14px; }
   .notif-bell-btn       { width: 32px; height: 32px; }
 }
 
@@ -949,15 +949,15 @@
 /* Dropdown */
 .notif-dropdown {
   display: none;
-  position: absolute;
-  top: calc(100% + 10px);
-  right: 0;
+  position: fixed;        /* fixed — escapes nav overflow clipping */
+  top: 56px;
+  right: 60px;            /* offset left of profile avatar */
   width: min(320px, calc(100vw - 24px));
   border-radius: 14px;
   background: #1a1a1a;
   border: 1px solid rgba(255,255,255,0.1);
   box-shadow: 0 16px 48px rgba(0,0,0,0.7);
-  z-index: 300;
+  z-index: 400;
   overflow: hidden;
   animation: dropdown-in 0.2s cubic-bezier(0.16,1,0.3,1) both;
 }
@@ -1467,15 +1467,15 @@
 /* Profile dropdown */
 .profile-dropdown {
   display: none;
-  position: absolute;
-  top: calc(100% + 10px);
-  right: 0;
+  position: fixed;        /* fixed instead of absolute — escapes ALL overflow clipping */
+  top: 56px;              /* just below topbar */
+  right: 16px;
   width: 220px;
   border-radius: 14px;
   background: #1a1a1a;
   border: 1px solid rgba(255,255,255,0.1);
   box-shadow: 0 16px 48px rgba(0,0,0,0.7);
-  z-index: 300;
+  z-index: 400;           /* above chat panel (201) and notif dropdown (300) */
   overflow: hidden;
   animation: dropdown-in 0.2s cubic-bezier(0.16,1,0.3,1) both;
 }
