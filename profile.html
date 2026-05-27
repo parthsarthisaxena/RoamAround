@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
+  <title>My Profile | RoamCircle</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;700;800&family=Fraunces:opsz,wght@9..144,700;9..144,800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    .profile-edit-page {
+      max-width: 680px;
+      margin: 0 auto;
+      padding: 40px clamp(16px,4vw,40px) 80px;
+    }
+
+    .profile-avatar-section {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      padding: 32px;
+      background: #181818;
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 20px;
+      margin-bottom: 24px;
+    }
+
+    .profile-avatar-big {
+      width: 110px;
+      height: 110px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 3px solid rgba(29,185,84,0.5);
+      box-shadow: 0 8px 32px rgba(29,185,84,0.25);
+      background: linear-gradient(135deg, #1DB954, #0ea5e9);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2.8rem;
+      font-weight: 800;
+      color: #000;
+      cursor: pointer;
+      transition: box-shadow 0.2s, transform 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .profile-avatar-big:hover {
+      box-shadow: 0 8px 40px rgba(29,185,84,0.45);
+      transform: scale(1.03);
+    }
+
+    .profile-avatar-big img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 50%;
+      position: absolute;
+      inset: 0;
+    }
+
+    .avatar-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(0,0,0,0.55);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity 0.2s;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: #fff;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .profile-avatar-big:hover .avatar-overlay { opacity: 1; }
+
+    #avatar-file-input { display: none; }
+
+    .avatar-upload-hint {
+      color: #727272;
+      font-size: 0.82rem;
+      text-align: center;
+    }
+
+    .profile-url-row {
+      display: flex;
+      gap: 8px;
+      width: 100%;
+      max-width: 400px;
+    }
+
+    .profile-url-row input {
+      flex: 1;
+      font-size: 0.82rem;
+    }
+
+    .profile-url-row .button {
+      min-height: 44px;
+      padding: 0 16px;
+      font-size: 0.82rem;
+      white-space: nowrap;
+    }
+
+    .profile-section {
+      background: #181818;
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 16px;
+    }
+
+    .profile-section h3 {
+      color: #fff;
+      font-size: 1rem;
+      font-weight: 800;
+      margin-bottom: 6px;
+    }
+
+    .profile-section .section-hint {
+      color: #727272;
+      font-size: 0.8rem;
+      margin-bottom: 14px;
+      line-height: 1.5;
+    }
+
+    .char-count {
+      text-align: right;
+      color: #727272;
+      font-size: 0.72rem;
+      margin-top: 4px;
+    }
+
+    .char-count.near-limit { color: #f59e0b; }
+    .char-count.at-limit   { color: #f43f5e; }
+
+    .save-bar {
+      position: sticky;
+      bottom: 0;
+      background: rgba(18,18,18,0.95);
+      backdrop-filter: blur(12px);
+      border-top: 1px solid rgba(255,255,255,0.08);
+      padding: 14px clamp(16px,4vw,40px);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    .save-status {
+      color: #727272;
+      font-size: 0.85rem;
+      flex: 1;
+    }
+
+    .save-status.ok   { color: #1DB954; }
+    .save-status.err  { color: #f43f5e; }
+
+    .ai-suggestion-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 14px;
+      border-radius: 500px;
+      background: rgba(29,185,84,0.1);
+      border: 1px solid rgba(29,185,84,0.3);
+      color: #1DB954;
+      font-size: 0.8rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.15s;
+      margin-top: 8px;
+    }
+
+    .ai-suggestion-btn:hover { background: rgba(29,185,84,0.2); }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="dashboard.html">
+      <span class="brand-mark">R</span>
+      <span>RoamCircle</span>
+    </a>
+    <nav class="nav">
+      <a href="dashboard.html">← Dashboard</a>
+    </nav>
+  </header>
+
+  <main>
+    <div class="profile-edit-page">
+      <div class="section-heading" style="margin-bottom:24px">
+        <p class="eyebrow">Your profile</p>
+        <h2 id="profile-heading">Edit your profile</h2>
+        <p>Your photo, bio, and partner preferences are used to match you with compatible riders.</p>
+      </div>
+
+      <!-- Avatar section -->
+      <div class="profile-avatar-section">
+        <div class="profile-avatar-big" id="avatar-display" onclick="document.getElementById('avatar-file-input').click()">
+          <img id="avatar-img" src="" alt="" style="display:none">
+          <span id="avatar-initial">?</span>
+          <div class="avatar-overlay">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+            Change photo
+          </div>
+        </div>
+        <input type="file" id="avatar-file-input" accept="image/*">
+        <p class="avatar-upload-hint">Click to upload · JPG, PNG, WebP · Max 2MB<br>
+          Or paste an image URL below</p>
+        <div class="profile-url-row">
+          <input type="url" id="avatar-url-input" placeholder="https://your-image-url.com/photo.jpg">
+          <button class="button tertiary" onclick="applyAvatarUrl()">Use URL</button>
+        </div>
+      </div>
+
+      <!-- Display name -->
+      <div class="profile-section">
+        <h3>Display name</h3>
+        <p class="section-hint">This is shown to other riders. Your account name stays unchanged.</p>
+        <div class="field">
+          <input type="text" id="display-name" maxlength="60" placeholder="Your riding name">
+        </div>
+      </div>
+
+      <!-- Bio -->
+      <div class="profile-section">
+        <h3>About me</h3>
+        <p class="section-hint">Tell other riders who you are. Your experience, riding style, past routes, why you ride. Be specific — generic bios get fewer matches.</p>
+        <div class="field">
+          <textarea id="bio" rows="5" maxlength="500"
+            placeholder="e.g. 5 years of riding, done Spiti twice and Rajasthan circuit. Prefer early starts, love roadside dhabas, always carry a full toolkit. Experienced with high altitude riding, non-drinker, non-smoker. Looking for people who ride at a similar pace and don't mind impromptu detours."></textarea>
+        </div>
+        <div class="char-count" id="bio-count">0 / 500</div>
+        <button class="ai-suggestion-btn" onclick="aiSuggestBio(this)">
+          ✨ Help me write this with AI
+        </button>
+      </div>
+
+      <!-- Looking for -->
+      <div class="profile-section">
+        <h3>What I'm looking for in a ride partner</h3>
+        <p class="section-hint">This is used by our matching algorithm. Be specific — "experienced high-altitude rider, non-smoker, same pace, fine with camping" works much better than "good vibes only".</p>
+        <div class="field">
+          <textarea id="looking-for" rows="4" maxlength="400"
+            placeholder="e.g. Experienced rider who's done at least one long-distance trip. Fine with 5am starts. Non-smoker. Comfortable with basic camping. Knows basic bike maintenance. Relaxed about schedule changes due to weather."></textarea>
+        </div>
+        <div class="char-count" id="lf-count">0 / 400</div>
+        <button class="ai-suggestion-btn" onclick="aiSuggestLF(this)">
+          ✨ Help me write this with AI
+        </button>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- Sticky save bar -->
+  <div class="save-bar">
+    <span class="save-status" id="save-status">Unsaved changes</span>
+    <button class="button primary" id="save-btn" onclick="saveProfile()">Save profile</button>
+  </div>
+
+  <script>
+    let currentAvatarUrl = "";
+    let profileLoaded    = false;
+
+    // ── Load profile ────────────────────────────────────────
+    async function loadProfile() {
+      const res  = await fetch("/api/profile");
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) { window.location.href = "/login.html"; return; }
+
+      const p = data.profile;
+      document.getElementById("profile-heading").textContent = `Hey, ${p.name} 👋`;
+      document.getElementById("display-name").value  = p.displayName || p.name || "";
+      document.getElementById("bio").value           = p.bio         || "";
+      document.getElementById("looking-for").value   = p.lookingFor  || "";
+      document.getElementById("avatar-initial").textContent = (p.displayName || p.name || "?")[0].toUpperCase();
+
+      if (p.avatarUrl) {
+        setAvatar(p.avatarUrl);
+      }
+
+      updateCharCounts();
+      document.getElementById("save-status").textContent = "All changes saved";
+      document.getElementById("save-status").className   = "save-status ok";
+      profileLoaded = true;
+    }
+
+    // ── Avatar handling ──────────────────────────────────────
+    function setAvatar(url) {
+      currentAvatarUrl = url;
+      const img = document.getElementById("avatar-img");
+      const init= document.getElementById("avatar-initial");
+      img.src   = url;
+      img.style.display  = "block";
+      init.style.display = "none";
+      img.onerror = () => {
+        img.style.display  = "none";
+        init.style.display = "block";
+        currentAvatarUrl   = "";
+      };
+    }
+
+    function applyAvatarUrl() {
+      const url = document.getElementById("avatar-url-input").value.trim();
+      if (!url) return;
+      setAvatar(url);
+      markDirty();
+    }
+
+    // File upload — convert to data URI
+    document.getElementById("avatar-file-input").addEventListener("change", e => {
+      const file = e.target.files[0];
+      if (!file) return;
+      if (file.size > 2 * 1024 * 1024) {
+        alert("Image must be under 2MB. Tip: use a free image host like imgbb.com and paste the URL instead.");
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload  = ev => { setAvatar(ev.target.result); markDirty(); };
+      reader.readAsDataURL(file);
+    });
+
+    // ── Char counts ──────────────────────────────────────────
+    function updateCharCounts() {
+      const bioEl  = document.getElementById("bio");
+      const lfEl   = document.getElementById("looking-for");
+      const bioC   = document.getElementById("bio-count");
+      const lfC    = document.getElementById("lf-count");
+
+      const bl = bioEl.value.length;
+      bioC.textContent = `${bl} / 500`;
+      bioC.className   = `char-count${bl > 480 ? " at-limit" : bl > 400 ? " near-limit" : ""}`;
+
+      const ll = lfEl.value.length;
+      lfC.textContent = `${ll} / 400`;
+      lfC.className   = `char-count${ll > 380 ? " at-limit" : ll > 320 ? " near-limit" : ""}`;
+    }
+
+    document.getElementById("bio").addEventListener("input",         () => { updateCharCounts(); markDirty(); });
+    document.getElementById("looking-for").addEventListener("input", () => { updateCharCounts(); markDirty(); });
+    document.getElementById("display-name").addEventListener("input",() => markDirty());
+
+    function markDirty() {
+      if (!profileLoaded) return;
+      document.getElementById("save-status").textContent = "Unsaved changes";
+      document.getElementById("save-status").className   = "save-status";
+    }
+
+    // ── Save ────────────────────────────────────────────────
+    async function saveProfile() {
+      const btn    = document.getElementById("save-btn");
+      const status = document.getElementById("save-status");
+      btn.textContent = "Saving…"; btn.disabled = true;
+
+      const payload = {
+        displayName: document.getElementById("display-name").value.trim(),
+        bio:         document.getElementById("bio").value.trim(),
+        lookingFor:  document.getElementById("looking-for").value.trim(),
+        avatarUrl:   currentAvatarUrl
+      };
+
+      const res  = await fetch("/api/profile", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify(payload)
+      });
+      const data = await res.json().catch(() => ({}));
+
+      if (res.ok) {
+        status.textContent = "✓ Profile saved";
+        status.className   = "save-status ok";
+        // Update navbar avatar if present in parent window
+        updateNavbarAvatar(currentAvatarUrl, payload.displayName);
+      } else {
+        status.textContent = `Error: ${data.error || "Could not save."}`;
+        status.className   = "save-status err";
+      }
+
+      btn.textContent = "Save profile"; btn.disabled = false;
+    }
+
+    function updateNavbarAvatar(url, name) {
+      // Updates the navbar avatar on dashboard if navigated back
+      sessionStorage.setItem("rc_profile_updated", "1");
+      sessionStorage.setItem("rc_avatar_url",  url  || "");
+      sessionStorage.setItem("rc_display_name", name || "");
+    }
+
+    // ── AI bio suggestions ───────────────────────────────────
+    async function aiSuggestBio(btn) {
+      const tripType= "motorcycle"; // could read from trip form
+      btn.textContent = "✨ Writing…"; btn.disabled = true;
+
+      // Pull existing info to make suggestion personal
+      const name    = document.getElementById("display-name").value.trim();
+      const habits  = ""; // could pull from trip form via sessionStorage
+      const lf      = document.getElementById("looking-for").value.trim();
+
+      const res  = await fetch("/api/ai/suggest", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({
+          type: "bio",
+          context: { name, tripType, lookingFor: lf }
+        })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.text) {
+        document.getElementById("bio").value = data.text;
+        updateCharCounts(); markDirty();
+      } else {
+        alert("AI suggestion unavailable. Check that GEMINI_API_KEY is set.");
+      }
+      btn.textContent = "✨ Help me write this with AI"; btn.disabled = false;
+    }
+
+    async function aiSuggestLF(btn) {
+      const bio = document.getElementById("bio").value.trim();
+      btn.textContent = "✨ Writing…"; btn.disabled = true;
+
+      const res  = await fetch("/api/ai/suggest", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({
+          type: "lookingFor",
+          context: { bio, tripType: "motorcycle" }
+        })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.text) {
+        document.getElementById("looking-for").value = data.text;
+        updateCharCounts(); markDirty();
+      } else {
+        alert("AI suggestion unavailable. Check that GEMINI_API_KEY is set.");
+      }
+      btn.textContent = "✨ Help me write this with AI"; btn.disabled = false;
+    }
+
+    loadProfile();
+  </script>
+</body>
+</html>

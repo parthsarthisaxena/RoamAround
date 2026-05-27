@@ -106,7 +106,32 @@
           </div>
         </div>
       </div>
-      <button class="nav-logout-btn" id="nav-logout">Log out</button>
+      <!-- Profile avatar dropdown -->
+      <div id="profile-nav-wrap" style="position:relative">
+        <button class="nav-avatar-btn" id="nav-avatar-btn" aria-label="Profile menu">
+          <img id="nav-avatar-img" src="" alt="" style="display:none;width:34px;height:34px;border-radius:50%;object-fit:cover;border:2px solid rgba(29,185,84,0.5)">
+          <div id="nav-avatar-fallback" class="nav-avatar-fallback">?</div>
+        </button>
+        <div id="profile-dropdown" class="profile-dropdown">
+          <div class="pd-header">
+            <div id="pd-name" style="color:#fff;font-weight:800;font-size:0.9rem"></div>
+            <div id="pd-email" style="color:#727272;font-size:0.75rem;margin-top:2px"></div>
+          </div>
+          <a class="pd-item" href="profile.html">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+            Edit profile
+          </a>
+          <a class="pd-item" href="#ai-planner">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3 7h7l-5.5 4 2 7L12 16l-6.5 4 2-7L2 9h7z"/></svg>
+            AI planner
+          </a>
+          <div class="pd-divider"></div>
+          <button class="pd-item pd-logout" id="nav-logout">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            Log out
+          </button>
+        </div>
+      </div>
     </nav>
   </header>
 
@@ -517,7 +542,7 @@
     // Pick up WS token stored at login and connect
     const _wsToken = sessionStorage.getItem("rc_ws_token");
     if (_wsToken && window.RC_setWsToken) {
-      sessionStorage.removeItem("rc_ws_token"); // use once
+      sessionStorage.removeItem("rc_ws_token");
       window.RC_setWsToken(_wsToken);
     }
 
@@ -527,13 +552,70 @@
       window.location.href = "/login.html";
     });
 
-    // Show logged-in user name in hero if available
-    fetch("/api/auth/me").then(r => r.json()).then(user => {
-      if (user && user.name) {
-        const hero = document.querySelector(".dashboard-hero h1");
-        if (hero) hero.textContent = `Hey, ${user.name.split(" ")[0]}. 👋`;
+    // Profile avatar dropdown toggle
+    const profileNavWrap = document.getElementById("profile-nav-wrap");
+    const profileDropdown= document.getElementById("profile-dropdown");
+    document.getElementById("nav-avatar-btn")?.addEventListener("click", e => {
+      e.stopPropagation();
+      profileDropdown?.classList.toggle("open");
+    });
+    document.addEventListener("click", e => {
+      if (!e.target.closest("#profile-nav-wrap")) {
+        profileDropdown?.classList.remove("open");
       }
-    }).catch(() => {});
+    });
+
+    // Load profile — populate avatar + hero greeting
+    async function loadNavProfile() {
+      // Check sessionStorage for recently updated profile
+      const cachedAvatar = sessionStorage.getItem("rc_avatar_url");
+      const cachedName   = sessionStorage.getItem("rc_display_name");
+      if (sessionStorage.getItem("rc_profile_updated")) {
+        sessionStorage.removeItem("rc_profile_updated");
+        if (cachedAvatar) setNavAvatar(cachedAvatar, cachedName || "");
+      }
+
+      const res  = await fetch("/api/profile").catch(() => null);
+      if (!res || !res.ok) return;
+      const data = await res.json().catch(() => ({}));
+      const p    = data.profile;
+      if (!p) return;
+
+      const displayName = p.displayName || p.name || "";
+      const firstName   = displayName.split(" ")[0];
+
+      // Update hero greeting
+      const hero = document.querySelector(".dashboard-hero h1");
+      if (hero) hero.textContent = `Hey, ${firstName}. 👋`;
+
+      // Update dropdown header
+      const pdName  = document.getElementById("pd-name");
+      const pdEmail = document.getElementById("pd-email");
+      if (pdName)  pdName.textContent  = displayName;
+      if (pdEmail) pdEmail.textContent = p.email || "";
+
+      // Set avatar
+      setNavAvatar(p.avatarUrl || "", displayName);
+    }
+
+    function setNavAvatar(url, name) {
+      const img  = document.getElementById("nav-avatar-img");
+      const fall = document.getElementById("nav-avatar-fallback");
+      const init = (name || "?")[0].toUpperCase();
+      if (fall) fall.textContent = init;
+
+      if (url && img) {
+        img.src = url;
+        img.style.display = "block";
+        if (fall) fall.style.display = "none";
+        img.onerror = () => {
+          img.style.display  = "none";
+          if (fall) fall.style.display = "flex";
+        };
+      }
+    }
+
+    loadNavProfile();
   </script>
   <script src="realtime.js"></script>
   <script src="script.js"></script>

@@ -313,6 +313,7 @@ async function openChat(requesterId) {
     if (ok && data.userId) {
       realUserCache[requesterId] = {
         userName:  data.userName,
+        avatarUrl: data.avatarUrl  || "",
         from:      data.from,
         to:        data.to,
         vehicle:   data.vehicle,
@@ -324,18 +325,23 @@ async function openChat(requesterId) {
 
   const real = !isDemo ? (realUserCache[requesterId] || null) : null;
 
-  // Determine display info
-  const displayName = tv?.name || real?.userName || "Rider";
-  const displayTrip = tv?.trip || (real ? `${real.from || "?"} → ${real.to || "?"}` : "");
-  const displayFace = tv?.face || null;
-  const displayInit = displayName[0] || "?";
+  // Determine display info — use avatarUrl for real users, face photo for demo
+  const displayName  = tv?.name      || real?.userName  || "Rider";
+  const displayTrip  = tv?.trip      || (real ? `${real.from || "?"} → ${real.to || "?"}` : "");
+  const displayFace  = tv?.face      || real?.avatarUrl || null;
+  const displayInit  = displayName[0] || "?";
 
   // Update header
   const img = document.getElementById("chat-avatar-img");
   const fb  = document.getElementById("chat-avatar-fallback");
   if (img) {
-    if (displayFace) { img.src = displayFace; img.style.display = "block"; }
-    else img.style.display = "none";
+    if (displayFace) {
+      img.src = displayFace;
+      img.style.display = "block";
+      img.onerror = () => { img.style.display = "none"; if (fb) { fb.style.display = "grid"; fb.textContent = displayInit; } };
+    } else {
+      img.style.display = "none";
+    }
   }
   if (fb) { fb.style.display = displayFace ? "none" : "grid"; fb.textContent = displayInit; }
 
@@ -639,6 +645,7 @@ async function loadAndRenderSuggestions() {
     // Populate real user cache so grid + tabs + openChat all work
     realUserCache[s.userId] = {
       userName:  s.userName,
+      avatarUrl: s.avatarUrl  || "",
       from:      s.from,
       to:        s.to,
       vehicle:   s.vehicle,
@@ -652,15 +659,23 @@ async function loadAndRenderSuggestions() {
   rebuildMatchesGrid(matchStates);
 }
 
+// Cache my trip dates so dateProximityLabel doesn't depend on DOM timing
+let _myTripStart = "";
+let _myTripEnd   = "";
+
+function cacheMyTripDates() {
+  _myTripStart = document.getElementById("start-date")?.value || "";
+  _myTripEnd   = document.getElementById("end-date")?.value   || "";
+}
+
 // Show a human-readable label for how close dates are
 function dateProximityLabel(theirStart, theirEnd) {
   try {
-    const now  = new Date();
-    const ts   = new Date(theirStart);
-    const te   = new Date(theirEnd);
-    // Get my trip dates from the form inputs
-    const myStart = new Date(document.getElementById("start-date")?.value || "");
-    const myEnd   = new Date(document.getElementById("end-date")?.value   || "");
+    const ts      = new Date(theirStart);
+    const te      = new Date(theirEnd);
+    // Fix 6 — use cached dates, not live DOM read
+    const myStart = new Date(_myTripStart || document.getElementById("start-date")?.value || "");
+    const myEnd   = new Date(_myTripEnd   || document.getElementById("end-date")?.value   || "");
     if (isNaN(myStart) || isNaN(myEnd) || isNaN(ts) || isNaN(te)) return "";
 
     const overlapMs   = Math.min(myEnd, te) - Math.max(myStart, ts);
@@ -701,7 +716,13 @@ function renderRealCard(s, existingState) {
     <div class="rrc-inner">
       <!-- Left: avatar column -->
       <div class="rrc-avatar-col">
-        <div class="rrc-avatar">${esc(s.userName?.[0] || "?")}</div>
+        ${s.avatarUrl
+          ? `<img class="rrc-avatar-img" src="${s.avatarUrl}"
+                  alt="${esc(s.userName?.[0] || "?")}"
+                  onerror="this.style.display='none';this.nextElementSibling.style.display='grid'"
+             ><div class="rrc-avatar" style="display:none">${esc(s.userName?.[0] || "?")}</div>`
+          : `<div class="rrc-avatar">${esc(s.userName?.[0] || "?")}</div>`
+        }
         <div class="rrc-score">${s.score}%</div>
       </div>
 
@@ -874,11 +895,13 @@ function wireTripForm() {
       setVal("habits",      t.habits);
       setVal("meetpoints",  t.meetpoints);
       restoreTripCard(t);
+      cacheMyTripDates(); // Fix 6 — cache dates after DB restore
     }
   });
 
   form.addEventListener("submit", async e => {
     e.preventDefault();
+    cacheMyTripDates(); // Fix 6 — cache dates before suggestions render
     const btn = document.getElementById("publish-btn");
     if (btn) { btn.textContent = "Publishing…"; btn.disabled = true; }
 
@@ -968,6 +991,7 @@ function wireRealtimeEvents() {
       if (ok && data.userId) {
         realUserCache[rid] = {
           userName:  data.userName,
+          avatarUrl: data.avatarUrl  || "",
           from:      data.from,
           to:        data.to,
           vehicle:   data.vehicle,

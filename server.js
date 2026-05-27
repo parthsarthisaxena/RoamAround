@@ -42,7 +42,8 @@ const ALLOWED_ORIGINS = new Set(
 const PROTECTED_PAGES = [
   "/dashboard.html", "/profile-arjun.html", "/profile-priya.html",
   "/profile-rohan.html", "/profile-lea.html", "/profile-maya.html",
-  "/profile-jun.html"
+  "/profile-jun.html",
+  "/profile.html"
 ];
 
 const DEMO_PREFIX = "demo_";
@@ -141,12 +142,12 @@ function sendRedirect(res, loc) {
   res.end();
 }
 
-function readBody(req) {
+function readBody(req, maxBytes = 500_000) {
   return new Promise((resolve, reject) => {
     let raw = "";
     req.on("data", c => {
       raw += c;
-      if (raw.length > 500_000) { reject(new Error("Body too large.")); req.destroy(); }
+      if (raw.length > maxBytes) { reject(new Error("Body too large.")); req.destroy(); }
     });
     req.on("end",   () => {
       try { resolve(raw ? JSON.parse(raw) : {}); }
@@ -436,15 +437,19 @@ const handleUserGet = dbRoute(async (req, res, userId) => {
   );
 
   sendJson(res, 200, {
-    userId:   userId,
-    userName: user.name,
-    tripType: user.tripType,
-    from:     trip?.from      || "",
-    to:       trip?.to        || "",
-    startDate: trip?.startDate || "",
-    endDate:   trip?.endDate   || "",
-    vehicle:   trip?.vehicle   || "",
-    pace:      trip?.pace      || ""
+    userId:     userId,
+    userName:   user.name,
+    displayName: user.displayName || user.name,
+    avatarUrl:  user.avatarUrl   || "",
+    bio:        user.bio         || "",
+    lookingFor: user.lookingFor  || "",
+    tripType:   user.tripType,
+    from:       trip?.from       || "",
+    to:         trip?.to         || "",
+    startDate:  trip?.startDate  || "",
+    endDate:    trip?.endDate    || "",
+    vehicle:    trip?.vehicle    || "",
+    pace:       trip?.pace       || ""
   }, req);
 });
 
@@ -646,11 +651,31 @@ function scoreCompatibility(myTrip, theirTrip) {
   score += pd===0 ? 25 : pd===1 ? 12 : 0;
   const bd = Math.abs((BUDGET_RANK[myTrip.budget]??1) - (BUDGET_RANK[theirTrip.budget]??1));
   score += bd===0 ? 25 : bd===1 ? 12 : 0;
+  // Habits overlap — 0-15 pts
   const myW = extractHabitWords(myTrip.habits||""), thW = extractHabitWords(theirTrip.habits||"");
   if (myW.size > 0 && thW.size > 0) {
     const shared = [...myW].filter(w=>thW.has(w)).length;
-    score += Math.round((shared / new Set([...myW,...thW]).size) * 20);
-  } else { score += 10; }
+    score += Math.round((shared / new Set([...myW,...thW]).size) * 15);
+  } else { score += 7; }
+
+  // lookingFor compatibility — 0-5 pts
+  // If their habits match what I'm looking for, or vice versa — bonus
+  const myLooking  = extractHabitWords(myTrip.lookingFor  || "");
+  const theirHabits= extractHabitWords(theirTrip.habits   || "");
+  const thLooking  = extractHabitWords(theirTrip.lookingFor|| "");
+  const myHabits   = extractHabitWords(myTrip.habits      || "");
+
+  let lfScore = 0;
+  if (myLooking.size > 0 && theirHabits.size > 0) {
+    const match = [...myLooking].filter(w => theirHabits.has(w)).length;
+    lfScore += Math.round((match / myLooking.size) * 3);
+  }
+  if (thLooking.size > 0 && myHabits.size > 0) {
+    const match = [...thLooking].filter(w => myHabits.has(w)).length;
+    lfScore += Math.round((match / thLooking.size) * 2);
+  }
+  score += Math.min(5, lfScore);
+
   return Math.min(100, score);
 }
 
@@ -874,6 +899,72 @@ Be brutally honest about difficult sections. Skip generic advice. Every field sh
   catch { sendJson(res, 502, { error: "Gemini returned invalid JSON." }, req); }
 });
 
+
+// ════════════════════════════════════════════════════════════
+// AI PROFILE SUGGESTIONS  (bio + lookingFor)
+// ════════════════════════════════════════════════════════════
+
+const handleAiSuggest = dbRoute(async (req, res) => {
+  const user = requireUser(req, res); if (!user) return;
+  // Fix 2 — rate limit: 10 AI suggestions per IP per hour
+  if (!rateLimit(req, res, 10, 60 * 60_000)) return;
+  if (!GEMINI_KEY) return sendJson(res, 500, { error: "GEMINI_API_KEY not configured." }, req);
+
+  const body    = await readBody(req);
+  const type    = String(body.type    || "bio");
+  const context = body.context || {};
+
+  let prompt = "";
+
+  if (type === "bio") {
+    prompt = `Write a short, honest, specific "About me" for a motorcycle rider profile on a travel partner app.
+Name: ${context.name || "a rider"}
+Trip type: ${context.tripType || "motorcycle"}
+What they are looking for: ${context.lookingFor || "not specified"}
+
+Rules:
+- Max 3 sentences, under 400 characters
+- Sound like a real person, not a travel blog
+- Mention riding style, experience level, or habits
+- No generic phrases like "love adventures" or "good vibes only"
+- Specific details only (e.g. "done Spiti twice", "carry full toolkit", "5am starter")
+Return only the bio text, no quotes, no extra formatting.`;
+  } else {
+    prompt = `Write a short, specific "Looking for in a ride partner" for a motorcycle rider profile.
+Their bio: ${context.bio || "an experienced motorcycle rider"}
+Trip type: ${context.tripType || "motorcycle"}
+
+Rules:
+- Max 3 sentences, under 350 characters
+- Be specific about pace, habits, experience level, non-negotiables
+- No generic phrases like "must be fun" or "good energy"
+- Examples of good specifics: "non-smoker", "fine with 5am starts", "knows basic mechanics", "comfortable with camping", "experienced with high altitude"
+Return only the text, no quotes, no extra formatting.`;
+  }
+
+  const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_KEY}`;
+
+  const resp = await fetch(geminiUrl, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: { maxOutputTokens: 150, temperature: 0.8 }
+    })
+  });
+
+  if (!resp.ok) {
+    const m = await resp.text();
+    return sendJson(res, 502, { error: `Gemini ${resp.status}: ${m.slice(0, 100)}` }, req);
+  }
+
+  const data = await resp.json();
+  const text = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+  if (!text) return sendJson(res, 502, { error: "Gemini returned empty response." }, req);
+
+  sendJson(res, 200, { text }, req);
+});
+
 // ════════════════════════════════════════════════════════════
 // STATIC FILES
 // ════════════════════════════════════════════════════════════
@@ -916,11 +1007,15 @@ function router(req, res) {
   if (method === "GET"  && urlPath === "/api/auth/me")      return handleMe(req, res);
   if (method === "GET"  && urlPath === "/api/auth/token")   return handleAuthToken(req, res);
 
-  // Users — Fix #4 + #8
+  // Users — public profile
   if (method === "GET" && urlPath.startsWith("/api/users/")) {
     const userId = decodeURIComponent(urlPath.slice("/api/users/".length));
     return handleUserGet(req, res, userId);
   }
+
+  // Profile — current user's own profile
+  if (method === "GET"  && urlPath === "/api/profile") return handleProfileGet(req, res);
+  if (method === "POST" && urlPath === "/api/profile") return handleProfileUpdate(req, res);
 
   // Trips
   if (method === "POST" && urlPath === "/api/trips")        return handleTripPost(req, res);
@@ -944,7 +1039,8 @@ function router(req, res) {
   }
 
   // AI
-  if (method === "POST" && urlPath === "/api/itinerary") return handleItinerary(req, res);
+  if (method === "POST" && urlPath === "/api/itinerary")   return handleItinerary(req, res);
+  if (method === "POST" && urlPath === "/api/ai/suggest")   return handleAiSuggest(req, res);
 
   // Static
   if (method === "GET" || method === "HEAD") return handleStatic(req, res);
@@ -986,3 +1082,52 @@ async function main() {
 }
 
 main();
+
+// ════════════════════════════════════════════════════════════
+// PROFILE — GET + UPDATE  (bio, lookingFor, avatarUrl)
+// ════════════════════════════════════════════════════════════
+
+// GET /api/profile — current user's full profile
+const handleProfileGet = dbRoute(async (req, res) => {
+  const user = requireUser(req, res); if (!user) return;
+  const doc  = await db.collection("users").findOne(
+    { _id: toObjectId(user.userId) },
+    { projection: { password: 0 } }   // never return password
+  );
+  if (!doc) return sendJson(res, 404, { error: "User not found." }, req);
+  sendJson(res, 200, { profile: doc }, req);
+});
+
+// POST /api/profile — update bio, lookingFor, avatarUrl
+const handleProfileUpdate = dbRoute(async (req, res) => {
+  const user = requireUser(req, res); if (!user) return;
+  // Allow up to 3MB for profile (data URI images)
+  const body = await readBody(req, 3_000_000);
+
+  const allowed = {};
+  if (typeof body.bio        === "string") allowed.bio        = body.bio.slice(0, 500).trim();
+  if (typeof body.lookingFor === "string") allowed.lookingFor = body.lookingFor.slice(0, 400).trim();
+  if (typeof body.avatarUrl  === "string") {
+    const url = body.avatarUrl.trim();
+    if (url.startsWith("https://")) {
+      allowed.avatarUrl = url;
+    } else if (url.startsWith("data:image/") && url.length < 2_000_000) {
+      allowed.avatarUrl = url;
+    } else if (url.startsWith("data:image/")) {
+      return sendJson(res, 413, { error: "Image too large. Use an image under 1.5MB or paste an https:// URL instead." }, req);
+    }
+  }
+  if (typeof body.displayName === "string") allowed.displayName = body.displayName.slice(0, 60).trim();
+
+  if (!Object.keys(allowed).length)
+    return sendJson(res, 400, { error: "No valid fields to update." }, req);
+
+  allowed.updatedAt = new Date();
+
+  await db.collection("users").updateOne(
+    { _id: toObjectId(user.userId) },
+    { $set: allowed }
+  );
+
+  sendJson(res, 200, { ok: true, updated: allowed }, req);
+});

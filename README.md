@@ -44,7 +44,7 @@ npm install
 ```powershell
 $env:MONGODB_URI   = "mongodb://127.0.0.1:27017"
 $env:JWT_SECRET    = "any-long-random-string-here"
-$env:OPENAI_API_KEY= "sk-..."          # optional
+$env:OPENAI_API_KEY= "AIzaSyDRSqt9hY8fI5VtoNZTdKKvXUAJ52GUc0o"          # optional
 npm start
 ```
 
@@ -52,7 +52,7 @@ npm start
 ```bash
 MONGODB_URI="mongodb://127.0.0.1:27017" \
 JWT_SECRET="any-long-random-string-here" \
-OPENAI_API_KEY="sk-..." \
+OPENAI_API_KEY="AIzaSyDRSqt9hY8fI5VtoNZTdKKvXUAJ52GUc0o" \
 npm start
 ```
 
@@ -242,4 +242,62 @@ Logout
 - Real user chat (mutual matches open a live thread)
 - Profile photo uploads
 - Push notifications via WebSocket
+
+
+---
+
+## Step 4 — Real-time WebSocket (current)
+
+### New dependency
+
+```bash
+npm install   # picks up "ws" from package.json
+```
+
+### How the WebSocket works
+
+```
+Login/Signup
+  → server returns JWT in response body
+  → client stores in sessionStorage("rc_ws_token")
+  → dashboard picks it up, calls RC_setWsToken(token)
+  → realtime.js opens ws://localhost:3000/ws?token=<jwt>
+  → server verifies JWT, registers userId → WebSocket connection
+  → heartbeat ping/pong every 25s keeps connection alive
+  → auto-reconnect with exponential backoff (1s → 2s → 4s → 30s max)
+```
+
+### Events pushed from server → client
+
+| Event | When | Payload |
+|---|---|---|
+| `connected` | On WS open | `{ userId, name }` |
+| `match_request` | Someone accepts you | `{ from, fromName, requesterId }` |
+| `match_accepted` | Mutual match confirmed | `{ from, fromName, requesterId }` |
+| `new_message` | Message arrives in thread | `{ threadId, from, fromName, text, ts }` |
+| `pong` | Response to client ping | `{}` |
+
+### Notification bell
+
+- Bell icon in topbar with unread count badge
+- Green dot = connected, grey dot = reconnecting
+- Dropdown lists up to 20 recent notifications
+- Clicking a notification navigates to the relevant section
+- Browser push notification shown if permission granted
+- Badge pulses red when unread count > 0
+
+### New file: `realtime.js`
+
+Load order in dashboard.html:
+```html
+<script src="realtime.js"></script>  <!-- WS + notifications -->
+<script src="script.js"></script>    <!-- AI planner -->
+<script src="chat.js"></script>      <!-- Chat + matches -->
+```
+
+`realtime.js` exposes:
+- `window.RC_setWsToken(token)` — called after login to start connection
+- `window.RC_WS.send(event)` — send a raw event to server
+- `window.RC_WS.isConnected()` — check connection state
+- `window._rcActiveThread` — set by chat.js so realtime.js skips notifications for open thread
 
