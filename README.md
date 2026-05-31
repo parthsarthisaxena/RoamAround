@@ -300,3 +300,5 @@ Load order in dashboard.html:
 - `window.RC_WS.send(event)` — send a raw event to server
 - `window.RC_WS.isConnected()` — check connection state
 - `window._rcActiveThread` — set by chat.js so realtime.js skips notifications for open thread
+
+  
