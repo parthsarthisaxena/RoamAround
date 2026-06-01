@@ -44,7 +44,7 @@ npm install
 ```powershell
 $env:MONGODB_URI   = "mongodb://127.0.0.1:27017"
 $env:JWT_SECRET    = "any-long-random-string-here"
-$env:OPENAI_API_KEY= "AIzaSyDRSqt9hY8fI5VtoNZTdKKvXUAJ52GUc0o"          # optional
+$env:OPENAI_API_KEY= ""          # optional
 npm start
 ```
 
@@ -52,7 +52,7 @@ npm start
 ```bash
 MONGODB_URI="mongodb://127.0.0.1:27017" \
 JWT_SECRET="any-long-random-string-here" \
-OPENAI_API_KEY="AIzaSyDRSqt9hY8fI5VtoNZTdKKvXUAJ52GUc0o" \
+OPENAI_API_KEY="" \
 npm start
 ```
 
