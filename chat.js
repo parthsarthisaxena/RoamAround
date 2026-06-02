@@ -560,6 +560,11 @@ function rebuildMatchesGrid(states) {
     card.querySelector(".mpc-chat-btn").addEventListener("click", () => openChat(id));
     grid.appendChild(card);
   });
+
+  // Animate newly added match cards
+  if (typeof window.RC_revealNew === "function") {
+    setTimeout(() => window.RC_revealNew(grid), 50);
+  }
 }
 
 // ── Apply accepted/rejected states ────────────────────────────

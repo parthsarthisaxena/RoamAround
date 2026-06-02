@@ -8,9 +8,10 @@
  * Fix #9  RC_connect removed (unused)
  * Fix #10 chat.js functions called via event queue to ensure init order
  */
-//fdhfdoisojojfodjsojdfojdsojfosdjofjdsojfdojofdjosdm
+
 (function () {
   "use strict";
+
   // ── State ─────────────────────────────────────────────────
   let ws            = null;
   let wsToken       = null;
