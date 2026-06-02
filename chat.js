@@ -122,6 +122,14 @@ const DEMO_PREFIX = "demo_";
 const BOT_PREFIX  = "bot_";
 
 function isDemoId(id)  { return id.startsWith(DEMO_PREFIX); }
+
+function coverImageStyle(url) {
+  const light = document.documentElement.getAttribute("data-theme") === "light";
+  const grad = light
+    ? "linear-gradient(to bottom, rgba(255,255,255,0.08) 0%, rgba(229,241,248,0.94) 100%)"
+    : "linear-gradient(to bottom, rgba(0,0,0,0.12) 0%, rgba(18,18,18,0.88) 100%)";
+  return `${grad}, url('${url}')`;
+}
 function demoKey(id)   { return id.startsWith(DEMO_PREFIX) ? id.slice(DEMO_PREFIX.length) : id; }
 function getDemoData(id) { return T[demoKey(id)] || null; }
 
@@ -1224,6 +1232,11 @@ document.addEventListener("DOMContentLoaded", async () => {
   wireTravelerDrawer();
   loadAndRenderSuggestions();
   wireRealtimeEvents();  // Fix #10 — wire realtime.js custom events
+
+  document.addEventListener("rc:theme-changed", () => {
+    const saved = localStorage.getItem("rc_trip_cover");
+    if (saved) setTripCover(saved);
+  });
 });
 
 // ── Trip detail drawer ────────────────────────────────────────
@@ -1246,16 +1259,14 @@ function setTripCover(url) {
   // Card thumbnail cover
   const cardCover = document.getElementById("trip-card-cover");
   if (cardCover) {
-    cardCover.style.backgroundImage =
-      `linear-gradient(to bottom,rgba(0,0,0,.1),rgba(18,18,18,.95)),url('${url}')`;
+    cardCover.style.backgroundImage = coverImageStyle(url);
     cardCover.style.backgroundSize   = "cover";
     cardCover.style.backgroundPosition = "center";
   }
   // Drawer cover
   const drawerCover = document.getElementById("td-cover");
   if (drawerCover) {
-    drawerCover.style.backgroundImage =
-      `linear-gradient(to bottom,rgba(0,0,0,.15) 0%,rgba(18,18,18,.7) 60%,#141414 100%),url('${url}')`;
+    drawerCover.style.backgroundImage = coverImageStyle(url);
     drawerCover.style.backgroundSize   = "cover";
     drawerCover.style.backgroundPosition = "center";
   }
@@ -1574,7 +1585,7 @@ async function openTravelerDrawer(id) {
   const coverEl = el("trd-cover");
   if (coverEl) {
     const coverUrl = traveler.cover || traveler.coverUrl || "https://images.unsplash.com/photo-1558981285-6f0c94958bb6?w=900&h=400&fit=crop";
-    coverEl.style.backgroundImage = `linear-gradient(to bottom,rgba(0,0,0,.15) 0%,rgba(18,18,18,.7) 60%,#141414 100%),url('${coverUrl}')`;
+    coverEl.style.backgroundImage = coverImageStyle(coverUrl);
     coverEl.style.backgroundSize = "cover";
     coverEl.style.backgroundPosition = "center";
   }

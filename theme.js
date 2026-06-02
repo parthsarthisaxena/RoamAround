@@ -34,6 +34,7 @@
   window.RC_toggleTheme = function () {
     const cur = document.documentElement.getAttribute("data-theme") || "dark";
     apply(cur === "light" ? "dark" : "light");
+    document.dispatchEvent(new CustomEvent("rc:theme-changed"));
   };
 
   function buildToggle() {

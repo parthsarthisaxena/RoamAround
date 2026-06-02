@@ -13,7 +13,7 @@
 </head>
 <body class="auth-page">
   <main class="auth-layout">
-    <section class="auth-panel signup">
+    <section class="auth-panel signup" data-trip-type="motorcycle" aria-live="polite">
       <a class="brand" href="index.html">
         <span class="brand-mark">R</span>
         <span>RoamCircle</span>
@@ -69,6 +69,24 @@
   </main>
 
   <script>
+    (function initSignupHero() {
+      const panel  = document.querySelector(".auth-panel.signup");
+      const select = document.getElementById("trip-type");
+      if (!panel || !select) return;
+
+      function syncSignupHero() {
+        const next = select.value;
+        if (panel.dataset.tripType === next) return;
+        panel.dataset.tripType = next;
+        panel.classList.remove("auth-hero-updated");
+        void panel.offsetWidth;
+        panel.classList.add("auth-hero-updated");
+      }
+
+      select.addEventListener("change", syncSignupHero);
+      syncSignupHero();
+    })();
+
     document.getElementById("signup-form").addEventListener("submit", async e => {
       e.preventDefault();
       const btn      = document.getElementById("submit-btn");
