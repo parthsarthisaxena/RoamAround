@@ -41,9 +41,7 @@ const ALLOWED_ORIGINS = new Set(
 
 const PROTECTED_PAGES = [
   "/dashboard.html", "/profile-arjun.html", "/profile-priya.html",
-  "/profile-rohan.html", "/profile-lea.html", "/profile-maya.html",
-  "/profile-jun.html",
-  "/profile.html"
+  "/profile-rohan.html", "/profile.html"
 ];
 
 const DEMO_PREFIX = "demo_";
@@ -191,13 +189,21 @@ function requireUser(req, res) {
 
 function makeAuthCookie(token) {
   return cookieLib.serialize("rc_token", token, {
-    httpOnly: true, sameSite: "lax", maxAge: 60*60*24*7, path: "/"
+    httpOnly: true,
+    sameSite: "lax",
+    maxAge:   60 * 60 * 24 * 7,
+    path:     "/",
+    secure:   process.env.NODE_ENV === "production"
   });
 }
 
 function clearAuthCookie() {
   return cookieLib.serialize("rc_token", "", {
-    httpOnly: true, sameSite: "lax", maxAge: 0, path: "/"
+    httpOnly: true,
+    sameSite: "lax",
+    maxAge:   0,
+    path:     "/",
+    secure:   process.env.NODE_ENV === "production"
   });
 }
 
@@ -205,7 +211,7 @@ function validateThreadOwnership(threadId, userId) {
   if (!threadId || !userId) return false;
   const sep = threadId.indexOf("_");
   if (sep === -1) return false;
-  return threadId.slice(0, sep) === userId;
+  return threadId.slice(0, sep) === userId || threadId.slice(sep + 1) === userId;
 }
 
 // ── Fix #6 — Normalize destination string ───────────────────
@@ -314,6 +320,7 @@ const handleSignup = dbRoute(async (req, res) => {
   const email    = String(body.email    || "").trim().toLowerCase();
   const password = String(body.password || "");
   const tripType = String(body.tripType || "motorcycle");
+  const gender   = ["unspecified", "male", "female", "other"].includes(body.gender) ? body.gender : "unspecified";
 
   if (!name)                          return sendJson(res, 400, { error: "Name is required." }, req);
   if (!email || !email.includes("@")) return sendJson(res, 400, { error: "Valid email is required." }, req);
@@ -321,7 +328,7 @@ const handleSignup = dbRoute(async (req, res) => {
 
   const hash   = await bcrypt.hash(password, SALT_ROUNDS);
   const result = await db.collection("users").insertOne({
-    name, email, password: hash, tripType, createdAt: new Date()
+    name, email, password: hash, tripType, gender, createdAt: new Date()
   }).catch(e => {
     if (e.code === 11000) throw Object.assign(new Error("duplicate"), { isDuplicate: true });
     throw e;
@@ -425,7 +432,7 @@ const handleUserGet = dbRoute(async (req, res, userId) => {
 
   const user = await db.collection("users").findOne(
     { _id: oid },
-    { projection: { name: 1, tripType: 1, createdAt: 1 } }
+    { projection: { name: 1, displayName: 1, avatarUrl: 1, bio: 1, lookingFor: 1, tripType: 1, createdAt: 1, gender: 1 } }
   );
 
   if (!user) return sendJson(res, 404, { error: "User not found." }, req);
@@ -433,8 +440,42 @@ const handleUserGet = dbRoute(async (req, res, userId) => {
   // Also fetch their trip for route info
   const trip = await db.collection("trips").findOne(
     { userId: userId, isLive: true },
-    { projection: { from: 1, to: 1, startDate: 1, endDate: 1, vehicle: 1, pace: 1, tripType: 1 } }
+    { projection: { from: 1, to: 1, startDate: 1, endDate: 1, vehicle: 1, pace: 1, tripType: 1, meetpoints: 1, habits: 1, budget: 1, coverUrl: 1, genderPreference: 1 } }
   );
+
+  // Enforce mutual gender matching preferences for other users
+  if (caller.userId !== userId) {
+    const callerAccepted = await db.collection("matches").findOne({
+      userId: caller.userId, requesterId: userId, state: "accept"
+    });
+    const theyAccepted = await db.collection("matches").findOne({
+      userId: userId, requesterId: caller.userId, state: "accept"
+    });
+
+    if (!callerAccepted && !theyAccepted) {
+      const myUser   = await db.collection("users").findOne({ _id: toObjectId(caller.userId) });
+      const myGender = myUser?.gender || "unspecified";
+
+      const myTrip = await db.collection("trips").findOne({ userId: caller.userId });
+      const myPref = myTrip?.genderPreference || "any";
+
+      const theirGender = user.gender || "unspecified";
+      const theirPref   = trip?.genderPreference || "any";
+
+      // Enforce mutual gender matching preferences
+      const isForbidden =
+        (myPref === "male" && theirGender !== "male") ||
+        (myPref === "female" && theirGender !== "female") ||
+        (myPref === "same" && (myGender === "unspecified" || myGender !== theirGender)) ||
+        (theirPref === "male" && myGender !== "male") ||
+        (theirPref === "female" && myGender !== "female") ||
+        (theirPref === "same" && (theirGender === "unspecified" || theirGender !== myGender));
+
+      if (isForbidden) {
+        return sendJson(res, 403, { error: "Access denied due to gender preferences." }, req);
+      }
+    }
+  }
 
   sendJson(res, 200, {
     userId:     userId,
@@ -444,12 +485,17 @@ const handleUserGet = dbRoute(async (req, res, userId) => {
     bio:        user.bio         || "",
     lookingFor: user.lookingFor  || "",
     tripType:   user.tripType,
+    gender:     user.gender      || "unspecified",
     from:       trip?.from       || "",
     to:         trip?.to         || "",
     startDate:  trip?.startDate  || "",
     endDate:    trip?.endDate    || "",
     vehicle:    trip?.vehicle    || "",
-    pace:       trip?.pace       || ""
+    pace:       trip?.pace       || "",
+    meetpoints: trip?.meetpoints || "",
+    habits:     trip?.habits     || "",
+    budget:     trip?.budget     || "",
+    coverUrl:   trip?.coverUrl   || ""
   }, req);
 });
 
@@ -478,6 +524,8 @@ const handleTripPost = dbRoute(async (req, res) => {
     budget:     String(body.budget      || "mid"),
     habits:     String(body.habits      || "").trim(),
     meetpoints: String(body.meetpoints  || "").trim(),
+    coverUrl:   String(body.coverUrl    || "").trim(),
+    genderPreference: ["any", "same", "male", "female"].includes(body.genderPreference) ? body.genderPreference : "any",
     updatedAt:  new Date(),
     isLive:     true
   };
@@ -525,16 +573,12 @@ const handleMatchPost = dbRoute(async (req, res, requesterId) => {
     { userId: user.userId, requesterId },
     {
       $set: { state, requesterType, updatedAt: new Date() },
-      $setOnInsert: { userId: user.userId, requesterId, requesterType, createdAt: new Date() }
+      $setOnInsert: { createdAt: new Date() }
     },
     { upsert: true }
   );
 
   if (state === "accept" && !requesterId.startsWith(DEMO_PREFIX)) {
-    push(requesterId, {
-      type: "match_request", from: user.userId, fromName: user.name, requesterId: user.userId
-    });
-
     const theyAccepted = await db.collection("matches").findOne({
       userId: requesterId, requesterId: user.userId, state: "accept"
     });
@@ -549,6 +593,10 @@ const handleMatchPost = dbRoute(async (req, res, requesterId) => {
 
       push(user.userId,   { type: "match_accepted", from: requesterId,   fromName: otherName,  requesterId });
       push(requesterId,   { type: "match_accepted", from: user.userId,   fromName: user.name,  requesterId: user.userId });
+    } else {
+      push(requesterId, {
+        type: "match_request", from: user.userId, fromName: user.name, requesterId: user.userId
+      });
     }
   }
 
@@ -564,12 +612,27 @@ const handleMessagesGet = dbRoute(async (req, res, threadId) => {
   if (!validateThreadOwnership(threadId, user.userId))
     return sendJson(res, 403, { error: "Access denied." }, req);
 
+  // Pagination: ?limit=N (default 50, max 200) + ?before=<ISO timestamp>
+  const url    = new URL(req.url, `http://${req.headers.host}`);
+  const limit  = Math.min(Math.max(Number(url.searchParams.get("limit") || 50), 1), 200);
+  const before = url.searchParams.get("before");
+
+  const filter = { threadId };
+  if (before) {
+    const ts = new Date(before);
+    if (!isNaN(ts)) filter.createdAt = { $lt: ts };
+  }
+
   const messages = await db.collection("messages")
-    .find({ threadId })
-    .sort({ createdAt: 1 })
+    .find(filter)
+    .sort({ createdAt: -1 })
+    .limit(limit)
     .toArray();
 
-  sendJson(res, 200, { messages }, req);
+  // Return in ascending order so the client sees oldest-first
+  messages.reverse();
+
+  sendJson(res, 200, { messages, hasMore: messages.length === limit }, req);
 });
 
 const handleMessagePost = dbRoute(async (req, res, threadId) => {
@@ -593,10 +656,11 @@ const handleMessagePost = dbRoute(async (req, res, threadId) => {
   const msg    = { threadId, from, fromName, text, type, meta, createdAt: new Date() };
   const result = await db.collection("messages").insertOne(msg);
 
-  // Fix #5 — skip self-notification
-  const ownerUserId = threadId.split("_")[0];
-  if (ownerUserId !== from) {
-    push(ownerUserId, {
+  // Push notification to the other user in the thread
+  const parts = threadId.split("_");
+  const otherUserId = parts[0] === from ? parts[1] : parts[0];
+  if (otherUserId && otherUserId !== from) {
+    push(otherUserId, {
       type: "new_message", threadId, from, fromName,
       text: type === "text" ? text : `[${type}]`,
       msgType: type, meta, ts: msg.createdAt.toISOString()
@@ -652,11 +716,12 @@ function scoreCompatibility(myTrip, theirTrip) {
   const bd = Math.abs((BUDGET_RANK[myTrip.budget]??1) - (BUDGET_RANK[theirTrip.budget]??1));
   score += bd===0 ? 25 : bd===1 ? 12 : 0;
   // Habits overlap — 0-15 pts
+  // Only score if both users have filled in habits — no free bonus for empty fields
   const myW = extractHabitWords(myTrip.habits||""), thW = extractHabitWords(theirTrip.habits||"");
   if (myW.size > 0 && thW.size > 0) {
     const shared = [...myW].filter(w=>thW.has(w)).length;
     score += Math.round((shared / new Set([...myW,...thW]).size) * 15);
-  } else { score += 7; }
+  }
 
   // lookingFor compatibility — 0-5 pts
   // If their habits match what I'm looking for, or vice versa — bonus
@@ -683,9 +748,14 @@ function scoreCompatibility(myTrip, theirTrip) {
 const handleMatchSuggestions = dbRoute(async (req, res) => {
   const user = requireUser(req, res); if (!user) return;
 
+  const myUser   = await db.collection("users").findOne({ _id: toObjectId(user.userId) });
+  const myGender = myUser?.gender || "unspecified";
+
   const myTrip = await db.collection("trips").findOne({ userId: user.userId });
   if (!myTrip?.toLower)
     return sendJson(res, 200, { suggestions: [], reason: "Publish your trip first." }, req);
+
+  const myPref = myTrip.genderPreference || "any";
 
   const myMatches  = await db.collection("matches").find({ userId: user.userId }).toArray();
   const decidedIds = new Set(myMatches.map(m => m.requesterId));
@@ -693,7 +763,7 @@ const handleMatchSuggestions = dbRoute(async (req, res) => {
   // Step 1: exact destination match
   const exactCandidates = await db.collection("trips").find({
     toLower: myTrip.toLower, isLive: true, userId: { $ne: user.userId }
-  }).toArray();
+  }).limit(100).toArray();
 
   // Step 2: fuzzy destination match — find trips sharing at least one
   // significant word with the user's destination (e.g. "Ladakh" matches "Leh Ladakh")
@@ -709,7 +779,7 @@ const handleMatchSuggestions = dbRoute(async (req, res) => {
       toLower: { $regex: fuzzyRegex },
       isLive:  true,
       userId:  { $ne: user.userId }
-    }).toArray();
+    }).limit(100).toArray();
 
     // Merge — deduplicate by userId
     const seen = new Set(exactCandidates.map(t => t.userId));
@@ -721,17 +791,53 @@ const handleMatchSuggestions = dbRoute(async (req, res) => {
     }
   }
 
-  const suggestions = allCandidates
-    .filter(t => !decidedIds.has(t.userId))
-    .map(t => ({
-      userId: t.userId, userName: t.userName,
-      from: t.from, to: t.to, startDate: t.startDate, endDate: t.endDate,
-      tripType: t.tripType, vehicle: t.vehicle, pace: t.pace,
-      budget: t.budget, habits: t.habits, meetpoints: t.meetpoints,
-      score: scoreCompatibility(myTrip, t),
-      // Flag if destination was fuzzy-matched so UI can show "nearby route"
-      destinationMatch: t.toLower === myTrip.toLower ? "exact" : "nearby"
-    }))
+  const candidateList = allCandidates.filter(t => !decidedIds.has(t.userId));
+
+  const enrichedSuggestions = (await Promise.all(
+    candidateList.map(async t => {
+      const uDoc = await db.collection("users").findOne(
+        { _id: toObjectId(t.userId) },
+        { projection: { displayName: 1, avatarUrl: 1, bio: 1, lookingFor: 1, gender: 1 } }
+      ).catch(() => null);
+
+      const theirGender = uDoc?.gender || "unspecified";
+      const theirPref   = t.genderPreference || "any";
+
+      // Enforce mutual gender matching preferences
+      if (myPref === "male" && theirGender !== "male") return null;
+      if (myPref === "female" && theirGender !== "female") return null;
+      if (myPref === "same" && (myGender === "unspecified" || myGender !== theirGender)) return null;
+
+      if (theirPref === "male" && myGender !== "male") return null;
+      if (theirPref === "female" && myGender !== "female") return null;
+      if (theirPref === "same" && (theirGender === "unspecified" || theirGender !== myGender)) return null;
+
+      return {
+        userId:      t.userId,
+        userName:    t.userName,
+        displayName: uDoc?.displayName || t.userName,
+        avatarUrl:   uDoc?.avatarUrl   || "",
+        bio:         uDoc?.bio         || "",
+        lookingFor:  uDoc?.lookingFor  || "",
+        gender:      theirGender,
+        from:        t.from,
+        to:          t.to,
+        startDate:   t.startDate,
+        endDate:     t.endDate,
+        tripType:    t.tripType,
+        vehicle:     t.vehicle,
+        pace:        t.pace,
+        budget:      t.budget,
+        habits:      t.habits,
+        meetpoints:  t.meetpoints,
+        coverUrl:    t.coverUrl        || "",
+        score:       scoreCompatibility(myTrip, t),
+        destinationMatch: t.toLower === myTrip.toLower ? "exact" : "nearby"
+      };
+    })
+  )).filter(Boolean);
+
+  const suggestions = enrichedSuggestions
     .sort((a, b) => b.score - a.score)
     .slice(0, 20);
 
@@ -744,10 +850,40 @@ const handleTripSearch = dbRoute(async (req, res) => {
   // Fix #6 — normalize search term same way as stored
   const to   = normalizeDestination(url.searchParams.get("to") || "");
   if (!to) return sendJson(res, 400, { error: "'to' query param required." }, req);
+
+  const myUser   = await db.collection("users").findOne({ _id: toObjectId(user.userId) });
+  const myGender = myUser?.gender || "unspecified";
+  const myTrip   = await db.collection("trips").findOne({ userId: user.userId });
+  const myPref   = myTrip?.genderPreference || "any";
+
   const trips = await db.collection("trips").find({
     toLower: to, isLive: true, userId: { $ne: user.userId }
-  }).toArray();
-  sendJson(res, 200, { trips }, req);
+  }).limit(100).toArray();
+
+  const filteredTrips = (await Promise.all(
+    trips.map(async t => {
+      const uDoc = await db.collection("users").findOne(
+        { _id: toObjectId(t.userId) },
+        { projection: { gender: 1 } }
+      ).catch(() => null);
+
+      const theirGender = uDoc?.gender || "unspecified";
+      const theirPref   = t.genderPreference || "any";
+
+      // Enforce mutual gender matching preferences
+      if (myPref === "male" && theirGender !== "male") return null;
+      if (myPref === "female" && theirGender !== "female") return null;
+      if (myPref === "same" && (myGender === "unspecified" || myGender !== theirGender)) return null;
+
+      if (theirPref === "male" && myGender !== "male") return null;
+      if (theirPref === "female" && myGender !== "female") return null;
+      if (theirPref === "same" && (theirGender === "unspecified" || theirGender !== myGender)) return null;
+
+      return t;
+    })
+  )).filter(Boolean);
+
+  sendJson(res, 200, { trips: filteredTrips }, req);
 });
 
 const handleMutualMatches = dbRoute(async (req, res) => {
@@ -973,8 +1109,14 @@ async function handleStatic(req, res) {
   const url   = new URL(req.url, `http://${req.headers.host}`);
   const pname = url.pathname === "/" ? "/index.html" : url.pathname;
 
-  if (PROTECTED_PAGES.includes(pname) && !getUser(req))
+  const user = getUser(req);
+  if (user) {
+    if (["/index.html", "/login.html", "/signup.html"].includes(pname)) {
+      return sendRedirect(res, "/dashboard.html");
+    }
+  } else if (PROTECTED_PAGES.includes(pname)) {
     return sendRedirect(res, "/login.html?reason=auth");
+  }
 
   const fpath = path.normalize(path.join(PUBLIC_DIR, pname));
   if (!fpath.startsWith(PUBLIC_DIR)) { res.writeHead(403); res.end("Forbidden"); return; }
@@ -983,7 +1125,13 @@ async function handleStatic(req, res) {
     const file = await fs.readFile(fpath);
     const ext  = path.extname(fpath).toLowerCase();
     setCORS(res, req);
-    res.writeHead(200, { "Content-Type": MIME[ext] || "application/octet-stream" });
+    // Cache static assets: CSS/JS for 1 hour, HTML never (so auth redirects always apply)
+    const isAsset = [".css", ".js", ".png", ".jpg", ".jpeg", ".svg"].includes(ext);
+    const cacheControl = isAsset ? "public, max-age=3600" : "no-cache, no-store, must-revalidate";
+    res.writeHead(200, {
+      "Content-Type":  MIME[ext] || "application/octet-stream",
+      "Cache-Control": cacheControl
+    });
     res.end(file);
   } catch {
     res.writeHead(404); res.end("Not found");
@@ -1049,41 +1197,6 @@ function router(req, res) {
 }
 
 // ════════════════════════════════════════════════════════════
-// BOOT
-// ════════════════════════════════════════════════════════════
-
-process.on("unhandledRejection", reason => console.error("[unhandledRejection]", reason));
-process.on("uncaughtException",  err    => { console.error("[uncaughtException]", err.message); process.exit(1); });
-
-async function shutdown(signal) {
-  console.log(`[shutdown] ${signal}`);
-  await mongo.close().catch(() => {});
-  process.exit(0);
-}
-process.on("SIGTERM", () => shutdown("SIGTERM"));
-process.on("SIGINT",  () => shutdown("SIGINT"));
-
-async function main() {
-  try { await connectDB(); }
-  catch(e) {
-    console.error("[db] MongoDB connection failed:", e.message);
-    process.exit(1);
-  }
-  const server = http.createServer(router);
-  setupWebSocket(server);
-  server.listen(PORT, () => {
-    console.log(`\nRoamCircle → http://localhost:${PORT}`);
-    console.log(`WebSocket  → ws://localhost:${PORT}/ws`);
-    console.log(`MongoDB:     ${MONGODB_URI}`);
-    console.log(`JWT:         ${JWT_SECRET === "roamcircle-dev-secret-change-in-prod" ? "⚠️  default" : "✓ custom"}`);
-    console.log(`Gemini:      ${GEMINI_KEY ? "✓ key found" : "⚠️  not set (AI planner disabled)"}`);
-    console.log(`CORS:        ${[...ALLOWED_ORIGINS].join(", ")}\n`);
-  });
-}
-
-main();
-
-// ════════════════════════════════════════════════════════════
 // PROFILE — GET + UPDATE  (bio, lookingFor, avatarUrl)
 // ════════════════════════════════════════════════════════════
 
@@ -1118,6 +1231,7 @@ const handleProfileUpdate = dbRoute(async (req, res) => {
     }
   }
   if (typeof body.displayName === "string") allowed.displayName = body.displayName.slice(0, 60).trim();
+  if (typeof body.gender      === "string" && ["unspecified", "male", "female", "other"].includes(body.gender)) allowed.gender = body.gender;
 
   if (!Object.keys(allowed).length)
     return sendJson(res, 400, { error: "No valid fields to update." }, req);
@@ -1131,3 +1245,38 @@ const handleProfileUpdate = dbRoute(async (req, res) => {
 
   sendJson(res, 200, { ok: true, updated: allowed }, req);
 });
+
+// ════════════════════════════════════════════════════════════
+// BOOT
+// ════════════════════════════════════════════════════════════
+
+process.on("unhandledRejection", reason => console.error("[unhandledRejection]", reason));
+process.on("uncaughtException",  err    => { console.error("[uncaughtException]", err.message); process.exit(1); });
+
+async function shutdown(signal) {
+  console.log(`[shutdown] ${signal}`);
+  await mongo.close().catch(() => {});
+  process.exit(0);
+}
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("SIGINT",  () => shutdown("SIGINT"));
+
+async function main() {
+  try { await connectDB(); }
+  catch(e) {
+    console.error("[db] MongoDB connection failed:", e.message);
+    process.exit(1);
+  }
+  const server = http.createServer(router);
+  setupWebSocket(server);
+  server.listen(PORT, () => {
+    console.log(`\nRoamCircle → http://localhost:${PORT}`);
+    console.log(`WebSocket  → ws://localhost:${PORT}/ws`);
+    console.log(`MongoDB:     ${MONGODB_URI}`);
+    console.log(`JWT:         ${JWT_SECRET === "roamcircle-dev-secret-change-in-prod" ? "⚠️  default" : "✓ custom"}`);
+    console.log(`Gemini:      ${GEMINI_KEY ? "✓ key found" : "⚠️  not set (AI planner disabled)"}`);
+    console.log(`CORS:        ${[...ALLOWED_ORIGINS].join(", ")}\n`);
+  });
+}
+
+main();

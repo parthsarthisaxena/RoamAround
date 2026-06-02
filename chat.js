@@ -10,14 +10,28 @@
 // ── Demo traveler registry (hardcoded demo cards only) ───────
 const T = {
   arjun: {
-    name:    "Arjun Mehta",
-    initial: "A",
-    face:    "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=120&h=120&fit=crop&crop=face",
-    cover:   "https://images.unsplash.com/photo-1558981285-6f0c94958bb6?w=600&h=200&fit=crop",
-    trip:    "Pune → Ladakh",
-    vehicle: "Bajaj Dominar 400",
-    dates:   "Jun 12–28",
-    welcome: "Hey! Saw your Mumbai–Ladakh post. I'm starting from Pune — routes merge at Nashik on day 2. Dates work perfectly!",
+    name:       "Arjun Mehta",
+    initial:    "A",
+    face:       "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=120&h=120&fit=crop&crop=face",
+    cover:      "https://images.unsplash.com/photo-1558981285-6f0c94958bb6?w=600&h=200&fit=crop",
+    trip:       "Pune → Ladakh",
+    from:       "Pune",
+    to:         "Ladakh",
+    vehicle:    "Bajaj Dominar 400",
+    dates:      "Jun 12–28",
+    startDate:  "Jun 12",
+    endDate:    "Jun 28",
+    pace:       "moderate",
+    budget:     "mid",
+    tripType:   "motorcycle",
+    meetpoints: "Pune, Nashik, Manali",
+    rating:     "4.7",
+    longRides:  "6",
+    score:      88,
+    habits:     "🌅 Early starter, 🛠️ Carries toolkit, 🏕️ Camping OK, 🍛 Dhaba lover, 🚭 Non-smoker",
+    bio:        "Hey fellow riders! I'm Arjun, a rider based in Pune. I've been riding long distance for about 6 years now. Completed Spiti Valley circuit twice, Kerala coastal route, and Ladakh once. Cruiser at heart, usually cruising comfortably at 85-95 km/h. Early starts (usually 5am!) are my standard to beat highway traffic and reach the first night stop before dark. I carry a full toolkit and spare parts, happy to help with minor mechanical issues.",
+    lookingFor: "Moderate-paced, safe, and reliable riders who respect road rules. Comfortable with basic guesthouses/wild camping, and don't mind starting early mornings.",
+    welcome:    "Hey! Saw your Mumbai–Ladakh post. I'm starting from Pune — routes merge at Nashik on day 2. Dates work perfectly!",
     replies: [
       "Nashik works great for me, I can be there by 8am 🤝",
       "I've done Leh–Manali twice, happy to navigate the passes",
@@ -30,14 +44,28 @@ const T = {
     ]
   },
   priya: {
-    name:    "Priya Nair",
-    initial: "P",
-    face:    "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=120&h=120&fit=crop&crop=face",
-    cover:   "https://images.unsplash.com/photo-1596738520741-38e3cc17439f?w=600&h=200&fit=crop",
-    trip:    "Nashik → Ladakh",
-    vehicle: "RE Classic 350",
-    dates:   "Jun 15–30",
-    welcome: "Hi! First Ladakh trip for me but I've done Spiti. I stop a lot for photos — hope that's okay for the group pace?",
+    name:       "Priya Nair",
+    initial:    "P",
+    face:       "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=120&h=120&fit=crop&crop=face",
+    cover:      "https://images.unsplash.com/photo-1596738520741-38e3cc17439f?w=600&h=200&fit=crop",
+    trip:       "Nashik → Ladakh",
+    from:       "Nashik",
+    to:         "Ladakh",
+    vehicle:    "RE Classic 350",
+    dates:      "Jun 15–30",
+    startDate:  "Jun 15",
+    endDate:    "Jun 30",
+    pace:       "relaxed",
+    budget:     "mid",
+    tripType:   "motorcycle",
+    meetpoints: "Nashik",
+    rating:     "4.5",
+    longRides:  "4",
+    score:      82,
+    habits:     "📸 Photographer, 🏕️ Camping, 🌿 Solo rider, 🔧 Basic mechanic, 🚭 Non-smoker",
+    bio:        "Hey there! I'm Priya, a solo rider and travel photographer starting from Nashik on my Royal Enfield Classic 350. Completed the Spiti circuit solo last year. I love slow travel, stopping frequently to take photographs, capture landscape shots, and explore off-beat scenic spots. Safety-conscious rider, relaxed pace, cruising at 70-80 km/h. Comfortable with basic setups, wild camping, and carried a first-aid kit.",
+    lookingFor: "Patience with frequent photography stops, similar relaxed riding pace, safe riding habits, and comfortable with camping in mountain environments.",
+    welcome:    "Hi! First Ladakh trip for me but I've done Spiti. I stop a lot for photos — hope that's okay for the group pace?",
     replies: [
       "The landscapes on this route are absolutely unreal for photography 📸",
       "I'm totally fine with a 5am start — golden hour light is best anyway",
@@ -50,14 +78,28 @@ const T = {
     ]
   },
   rohan: {
-    name:    "Rohan Das",
-    initial: "R",
-    face:    "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=120&h=120&fit=crop&crop=face",
-    cover:   "https://images.unsplash.com/photo-1604537466608-109fa2f16c3b?w=600&h=200&fit=crop",
-    trip:    "Delhi → Ladakh",
-    vehicle: "KTM Adventure 390",
-    dates:   "Jun 10–22",
-    welcome: "Yo! Different source but same destination. Manali is the natural sync point. I ride fast but always wait at major stops.",
+    name:       "Rohan Das",
+    initial:    "R",
+    face:       "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=120&h=120&fit=crop&crop=face",
+    cover:      "https://images.unsplash.com/photo-1604537466608-109fa2f16c3b?w=600&h=200&fit=crop",
+    trip:       "Delhi → Ladakh",
+    from:       "Delhi",
+    to:         "Ladakh",
+    vehicle:    "KTM Adventure 390",
+    dates:      "Jun 10–22",
+    startDate:  "Jun 10",
+    endDate:    "Jun 22",
+    pace:       "fast",
+    budget:     "mid",
+    tripType:   "motorcycle",
+    meetpoints: "Manali, Delhi",
+    rating:     "4.8",
+    longRides:  "11",
+    score:      74,
+    habits:     "⚡ Fast rider, 🏨 Guesthouses, 🛠️ Expert mechanic, 📡 Satellite phone",
+    bio:        "Yo! I'm Rohan, a fast-paced adventurer starting from Delhi on my KTM Adventure 390. Highly experienced with 11 long rides under my belt, including Leh-Srinagar twice, Spiti, and northeastern routes. Fast cruising style (100-110 km/h), usually targeting 350-450 km per day. Expert mechanic — happy to perform quick checkups on the group bikes. I carry a satellite phone for emergency safety.",
+    lookingFor: "Highly self-reliant, fast-paced riders with mountain experience. Must know basic bike maintenance. Comfortable with guesthouses or hostels.",
+    welcome:    "Yo! Different source but same destination. Manali is the natural sync point. I ride fast but always wait at major stops.",
     replies: [
       "KTM vs Himalayan on the passes is always a fun conversation 😄",
       "I have a satellite phone for emergencies — useful if the group splits",
@@ -119,7 +161,9 @@ async function getMyUserId() {
 // ── Thread ID ─────────────────────────────────────────────────
 async function threadId(requesterId) {
   const uid = await getMyUserId();
-  return uid ? `${uid}_${requesterId}` : null;
+  if (!uid) return null;
+  const sorted = [uid, requesterId].sort();
+  return `${sorted[0]}_${sorted[1]}`;
 }
 
 // ── Time helpers ──────────────────────────────────────────────
@@ -132,12 +176,21 @@ function fmtDate(iso) {
   return d.toLocaleDateString([], { month: "short", day: "numeric" });
 }
 function esc(s) {
-  return String(s)
+  return String(s || "")
     .replace(/&/g, "&amp;").replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    .replace(/>/g, "&gt;").replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
 
 // ── Match state helpers ───────────────────────────────────────
+window.rcMutualMatches = new Set();
+async function loadMutualMatches() {
+  const { ok, data } = await apiGet("/api/matches/mutual");
+  if (ok && data.mutual) {
+    window.rcMutualMatches = new Set(data.mutual.map(m => m.requesterId));
+  }
+}
+
 async function loadMatchStates() {
   const { ok, data } = await apiGet("/api/matches");
   if (ok) { cacheSet("rc_matches", data.matches); return data.matches; }
@@ -150,16 +203,31 @@ async function saveMatchState(requesterId, action) {
   cacheSet("rc_matches", cached);
   const { ok, data } = await apiPost(`/api/matches/${requesterId}`, { action });
   if (!ok) console.error("[match save]", data.error);
+  await loadMutualMatches();
 }
 
 function getAccepted(states) {
   return Object.entries(states || {}).filter(([, v]) => v === "accept").map(([k]) => k);
 }
 
-// ── Message helpers ───────────────────────────────────────────
-async function loadMessages(tid) {
-  const { ok, data } = await apiGet(`/api/messages/${encodeURIComponent(tid)}`);
-  if (ok) { cacheSet(`rc_msgs_${tid}`, data.messages); return data.messages; }
+window._rcThreadHasMore = {};
+async function loadMessages(tid, before = "") {
+  let url = `/api/messages/${encodeURIComponent(tid)}?limit=50`;
+  if (before) url += `&before=${encodeURIComponent(before)}`;
+  const { ok, data } = await apiGet(url);
+  if (ok) {
+    if (before) {
+      const existing = cacheGet(`rc_msgs_${tid}`) || [];
+      const merged = [...data.messages, ...existing];
+      cacheSet(`rc_msgs_${tid}`, merged);
+      window._rcThreadHasMore[tid] = data.hasMore;
+      return merged;
+    } else {
+      cacheSet(`rc_msgs_${tid}`, data.messages);
+      window._rcThreadHasMore[tid] = data.hasMore;
+      return data.messages;
+    }
+  }
   return cacheGet(`rc_msgs_${tid}`) || [];
 }
 
@@ -178,7 +246,7 @@ function getBotReplyIndex(msgs, requesterId) {
 }
 
 // ── Render messages ───────────────────────────────────────────
-function renderMsgs(msgs, requesterId) {
+function renderMsgs(msgs, requesterId, isLoadMore = false) {
   const box = document.getElementById("chat-messages");
   const typ = document.getElementById("typing-indicator");
   if (!box) return;
@@ -224,9 +292,36 @@ function renderMsgs(msgs, requesterId) {
     }
   });
 
+  const activeTid = window._rcActiveThread;
+  const hasMore = activeTid && window._rcThreadHasMore[activeTid];
+  if (hasMore) {
+    html = `<div class="chat-load-more-wrap" style="text-align:center;padding:15px 0 5px">
+      <button class="button compact" id="chat-load-more-btn" style="background:rgba(29,185,84,0.1);color:#1DB954;border:1px solid rgba(29,185,84,0.3);border-radius:20px;padding:4px 12px;font-size:0.75rem;font-weight:700;cursor:pointer;transition:all 0.2s">Load older messages</button>
+    </div>` + html;
+  }
+
   box.innerHTML = html;
   if (typ) box.appendChild(typ);
-  scrollBottom(false);
+
+  if (hasMore) {
+    const btn = document.getElementById("chat-load-more-btn");
+    if (btn) {
+      btn.addEventListener("click", async (e) => {
+        e.stopPropagation();
+        btn.disabled = true;
+        btn.textContent = "Loading...";
+        const oldest = msgs[0]?.createdAt || new Date().toISOString();
+        const oldScrollHeight = box.scrollHeight;
+        const merged = await loadMessages(activeTid, oldest);
+        renderMsgs(merged, requesterId, true);
+        box.scrollTop = box.scrollHeight - oldScrollHeight;
+      });
+    }
+  }
+
+  if (!isLoadMore) {
+    scrollBottom(false);
+  }
 }
 
 function showChatLoading() {
@@ -318,7 +413,8 @@ async function openChat(requesterId) {
         to:        data.to,
         vehicle:   data.vehicle,
         startDate: data.startDate,
-        endDate:   data.endDate
+        endDate:   data.endDate,
+        gender:    data.gender     || "unspecified"
       };
     }
   }
@@ -406,10 +502,15 @@ function buildTabs(currentId) {
   const states   = cacheGet("rc_matches") || {};
   const accepted = getAccepted(states); // all accepted, both demo and real
 
-  // Only show tabs for IDs that have either a T entry OR a realUserCache entry
-  const ids = [...new Set([currentId, ...accepted])].filter(id =>
-    getDemoData(id) || realUserCache[id]
-  );
+  // Only show tabs for IDs that are mutually matched (or is the current active thread ID)
+  const ids = [...new Set([currentId, ...accepted])].filter(id => {
+    const hasData = getDemoData(id) || realUserCache[id];
+    if (!hasData) return false;
+    if (id === currentId) return true;
+    const isDemo = isDemoId(id);
+    const isMutual = isDemo || (window.rcMutualMatches && window.rcMutualMatches.has(id));
+    return isMutual;
+  });
 
   if (ids.length <= 1) { el.classList.remove("visible"); return; }
   el.classList.add("visible");
@@ -423,7 +524,7 @@ function buildTabs(currentId) {
     return `
       <button class="chat-tab${id === currentId ? " active" : ""}" data-thread="${id}">
         ${face
-          ? `<img class="chat-tab-face" src="${face}" alt="${init}" onerror="this.style.display='none'">`
+          ? `<img class="chat-tab-face" src="${esc(face)}" alt="${init}" onerror="this.style.display='none'">`
           : `<div class="chat-tab-face" style="display:grid;place-items:center;background:linear-gradient(135deg,#1DB954,#0ea5e9);color:#000;font-weight:800;font-size:0.7rem;border-radius:50%">${init}</div>`
         }
         ${esc(name)}
@@ -471,10 +572,12 @@ function syncNav(states) {
   const btn = document.getElementById("nav-chat-btn");
   const cnt = document.getElementById("nav-chat-count");
   if (btn) {
-    // Count all accepted IDs that have known data (demo or real)
-    const n = getAccepted(states).filter(id =>
-      getDemoData(id) || realUserCache[id]
-    ).length;
+    // Count all mutual matches (both demo and real)
+    const n = getAccepted(states).filter(id => {
+      const isDemo = isDemoId(id);
+      const isMutual = isDemo || (window.rcMutualMatches && window.rcMutualMatches.has(id));
+      return isMutual && (getDemoData(id) || realUserCache[id]);
+    }).length;
     btn.classList.toggle("has-active", n > 0);
     if (cnt) { cnt.textContent = n; cnt.hidden = n === 0; }
   }
@@ -505,9 +608,10 @@ function rebuildMatchesGrid(states) {
   if (empty) empty.style.display = "none";
 
   accepted.forEach(id => {
-    const isDemo = isDemoId(id);
-    const tv     = getDemoData(id);
-    const real   = realUserCache[id];
+    const isDemo   = isDemoId(id);
+    const tv       = getDemoData(id);
+    const real     = realUserCache[id];
+    const isMutual = isDemo || (window.rcMutualMatches && window.rcMutualMatches.has(id));
 
     const name   = tv?.name  || real?.userName || "Rider";
     const face   = tv?.face  || null;
@@ -519,7 +623,7 @@ function rebuildMatchesGrid(states) {
     const dt     = tv?.dates   || (real ? `${real.startDate || ""} – ${real.endDate || ""}` : "");
 
     const coverStyle = cover
-      ? `background-image:url('${cover}');background-size:cover;background-position:center`
+      ? `background-image:url('${esc(cover)}');background-size:cover;background-position:center`
       : `background:linear-gradient(135deg,rgba(29,185,84,0.2),#1a1a2e)`;
 
     const card = document.createElement("div");
@@ -531,7 +635,7 @@ function rebuildMatchesGrid(states) {
       <div class="mpc-body">
         <div class="mpc-face-wrap">
           ${face
-            ? `<img class="mpc-face" src="${face}" alt="${esc(name)}"
+            ? `<img class="mpc-face" src="${esc(face)}" alt="${esc(name)}"
                     onerror="this.style.display='none';this.nextElementSibling.style.display='grid'">
                <div class="mpc-face-fallback">${init}</div>`
             : `<div class="mpc-face-fallback" style="display:grid">${init}</div>`
@@ -547,17 +651,23 @@ function rebuildMatchesGrid(states) {
           <span class="to-pill">${esc(to)}</span>
         </div>
         <div class="mpc-vehicle">🏍️ ${esc(veh)} · ${esc(dt)}</div>
-        ${!isDemo
+        ${!isMutual
           ? `<div class="mpc-pending-badge">⏳ Waiting for their accept</div>`
-          : ""}
-        <button class="mpc-chat-btn" data-open-chat="${id}">
+          : `<div class="mpc-mutual-badge" style="color:#1DB954;font-size:0.72rem;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;margin-bottom:6px">🎉 Mutual Match</div>`}
+        <button class="mpc-chat-btn" data-open-chat="${id}" ${!isMutual ? "disabled style='background:#333;color:#727272;cursor:not-allowed;transform:none'" : ""}>
           <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
             <path d="M20 2H4a2 2 0 0 0-2 2v18l4-4h14a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2z"/>
           </svg>
-          Open chat
+          ${isMutual ? "Open chat" : "Waiting to accept"}
         </button>
       </div>`;
-    card.querySelector(".mpc-chat-btn").addEventListener("click", () => openChat(id));
+    card.querySelector(".mpc-chat-btn").addEventListener("click", () => {
+      if (isMutual) openChat(id);
+    });
+    card.addEventListener("click", e => {
+      if (e.target.closest("button, a")) return;
+      openTravelerDrawer(id);
+    });
     grid.appendChild(card);
   });
 
@@ -588,11 +698,27 @@ function applyAccepted(card, id, states) {
   rebuildMatchesGrid(states || cacheGet("rc_matches") || {});
 }
 
+function dismissCard(card, animate = true) {
+  if (animate) {
+    // Collapse height + fade out, then remove
+    card.style.transition = "opacity 0.22s ease, transform 0.22s ease, max-height 0.3s ease 0.18s, margin 0.3s ease 0.18s, padding 0.3s ease 0.18s";
+    card.style.opacity    = "0";
+    card.style.transform  = "scale(0.95) translateY(-6px)";
+    card.style.maxHeight  = card.offsetHeight + "px"; // lock before collapsing
+    void card.offsetWidth; // flush
+    setTimeout(() => {
+      card.style.maxHeight = "0";
+      card.style.margin    = "0";
+      card.style.padding   = "0";
+    }, 30);
+    setTimeout(() => card.remove(), 500);
+  } else {
+    card.remove();
+  }
+}
+
 function applyRejected(card, states) {
-  card.classList.add("is-rejected");
-  card.classList.remove("is-accepted");
-  const act = card.querySelector(".request-actions");
-  if (act) act.innerHTML = `<p class="request-status-text" style="color:#727272">Declined</p>`;
+  dismissCard(card, true);
   syncNav(states || cacheGet("rc_matches") || {});
   rebuildMatchesGrid(states || cacheGet("rc_matches") || {});
 }
@@ -602,20 +728,33 @@ function applyRealAccepted(card, userId, states) {
   card.classList.remove("is-rejected");
   const act = card.querySelector(".request-actions");
   if (act) {
-    act.innerHTML = `
-      <p class="request-status-text">Request sent ✓</p>
-      <p style="color:#b3b3b3;font-size:0.8rem;margin:4px 0 0">
-        Waiting for them to accept you back
-      </p>`;
+    const isMutual = window.rcMutualMatches && window.rcMutualMatches.has(userId);
+    if (isMutual) {
+      act.innerHTML = `
+        <p class="request-status-text">Mutual match! 🎉</p>
+        <button class="open-chat-btn" data-open-chat="${userId}" style="margin-top:6px;background:#1DB954;color:#000;border:none;border-radius:20px;padding:6px 16px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:4px">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M20 2H4a2 2 0 0 0-2 2v18l4-4h14a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2z"/>
+          </svg>
+          Open chat
+        </button>`;
+      act.querySelector("[data-open-chat]").addEventListener("click", e => {
+        e.stopPropagation();
+        openChat(userId);
+      });
+    } else {
+      act.innerHTML = `
+        <p class="request-status-text">Request sent ✓</p>
+        <p style="color:#b3b3b3;font-size:0.8rem;margin:4px 0 0">
+          Waiting for them to accept you back
+        </p>`;
+    }
   }
   if (states) { syncNav(states); rebuildMatchesGrid(states); }
 }
 
 function applyRealRejected(card, states) {
-  card.classList.add("is-rejected");
-  card.classList.remove("is-accepted");
-  const act = card.querySelector(".request-actions");
-  if (act) act.innerHTML = `<p class="request-status-text" style="color:#727272">Declined</p>`;
+  dismissCard(card, true);
   if (states) { syncNav(states); rebuildMatchesGrid(states); }
 }
 
@@ -649,13 +788,24 @@ async function loadAndRenderSuggestions() {
   suggestions.forEach(s => {
     // Populate real user cache so grid + tabs + openChat all work
     realUserCache[s.userId] = {
-      userName:  s.userName,
-      avatarUrl: s.avatarUrl  || "",
-      from:      s.from,
-      to:        s.to,
-      vehicle:   s.vehicle,
-      startDate: s.startDate,
-      endDate:   s.endDate
+      userName:    s.userName,
+      displayName: s.displayName || s.userName,
+      avatarUrl:   s.avatarUrl   || "",
+      from:        s.from,
+      to:          s.to,
+      vehicle:     s.vehicle,
+      startDate:   s.startDate,
+      endDate:     s.endDate,
+      bio:         s.bio         || "",
+      lookingFor:  s.lookingFor  || "",
+      pace:        s.pace        || "moderate",
+      budget:      s.budget      || "mid",
+      tripType:    s.tripType    || "motorcycle",
+      habits:      s.habits      || "",
+      meetpoints:  s.meetpoints  || "",
+      coverUrl:    s.coverUrl    || "",
+      score:       s.score       || 0,
+      destinationMatch: s.destinationMatch || "exact"
     };
     renderRealCard(s, matchStates[s.userId]);
   });
@@ -722,7 +872,7 @@ function renderRealCard(s, existingState) {
       <!-- Left: avatar column -->
       <div class="rrc-avatar-col">
         ${s.avatarUrl
-          ? `<img class="rrc-avatar-img" src="${s.avatarUrl}"
+          ? `<img class="rrc-avatar-img" src="${esc(s.avatarUrl)}"
                   alt="${esc(s.userName?.[0] || "?")}"
                   onerror="this.style.display='none';this.nextElementSibling.style.display='grid'"
              ><div class="rrc-avatar" style="display:none">${esc(s.userName?.[0] || "?")}</div>`
@@ -774,16 +924,19 @@ function renderRealCard(s, existingState) {
   list.appendChild(card);
 
   if (existingState === "accept")  applyRealAccepted(card, s.userId);
-  else if (existingState === "reject") applyRealRejected(card);
+  else if (existingState === "reject") dismissCard(card, false); // already decided — remove silently
 
   card.addEventListener("click", async e => {
     const btn = e.target.closest("[data-request-action]");
-    if (!btn) return;
-    const action = btn.dataset.requestAction;
-    await saveMatchState(s.userId, action);
-    const updated = cacheGet("rc_matches") || {};
-    if (action === "accept") applyRealAccepted(card, s.userId, updated);
-    else applyRealRejected(card, updated);
+    if (btn) {
+      const action = btn.dataset.requestAction;
+      await saveMatchState(s.userId, action);
+      const updated = cacheGet("rc_matches") || {};
+      if (action === "accept") applyRealAccepted(card, s.userId, updated);
+      else applyRealRejected(card, updated);
+    } else if (!e.target.closest("button, a")) {
+      openTravelerDrawer(s.userId);
+    }
   });
 }
 
@@ -791,20 +944,56 @@ function renderRealCard(s, existingState) {
 async function wireCards() {
   await getMyUserId();
   const states = await loadMatchStates();
+  await loadMutualMatches();
+
+  // Load profiles of all real accepted users to populate realUserCache
+  const accepted = getAccepted(states);
+  const realAcceptedIds = accepted.filter(id => !isDemoId(id));
+
+  await Promise.all(realAcceptedIds.map(async id => {
+    if (!realUserCache[id]) {
+      const { ok, data } = await apiGet(`/api/users/${encodeURIComponent(id)}`);
+      if (ok && data.userId) {
+        realUserCache[id] = {
+          userName:    data.userName,
+          displayName: data.displayName || data.userName,
+          avatarUrl:   data.avatarUrl   || "",
+          from:        data.from,
+          to:          data.to,
+          vehicle:     data.vehicle,
+          startDate:   data.startDate,
+          endDate:     data.endDate,
+          bio:         data.bio         || "",
+          lookingFor:  data.lookingFor  || "",
+          pace:        data.pace        || "moderate",
+          budget:      data.budget      || "mid",
+          tripType:    data.tripType    || "motorcycle",
+          habits:      data.habits      || "",
+          meetpoints:  data.meetpoints  || "",
+          coverUrl:    data.coverUrl    || "",
+          score:       data.score       || 0,
+          gender:      data.gender      || "unspecified",
+        };
+      }
+    }
+  }));
 
   document.querySelectorAll("[data-request-card]").forEach(card => {
     const id = card.dataset.requestCard;
     if (states[id] === "accept")  applyAccepted(card, id, states);
-    else if (states[id] === "reject") applyRejected(card, states);
+    else if (states[id] === "reject") dismissCard(card, false); // already decided — remove silently
 
     card.addEventListener("click", async e => {
       const btn = e.target.closest("[data-request-action]");
-      if (!btn) return;
-      const action = btn.dataset.requestAction;
-      await saveMatchState(id, action);
-      const updated = cacheGet("rc_matches") || {};
-      if (action === "accept") { applyAccepted(card, id, updated); openChat(id); }
-      else applyRejected(card, updated);
+      if (btn) {
+        const action = btn.dataset.requestAction;
+        await saveMatchState(id, action);
+        const updated = cacheGet("rc_matches") || {};
+        if (action === "accept") { applyAccepted(card, id, updated); openChat(id); }
+        else applyRejected(card, updated);
+      } else if (!e.target.closest("button, a")) {
+        openTravelerDrawer(id);
+      }
     });
   });
 
@@ -899,6 +1088,7 @@ function wireTripForm() {
       setVal("budget",      t.budget);
       setVal("habits",      t.habits);
       setVal("meetpoints",  t.meetpoints);
+      setVal("gender-preference", t.genderPreference || "any");
       restoreTripCard(t);
       cacheMyTripDates(); // Fix 6 — cache dates after DB restore
     }
@@ -920,7 +1110,9 @@ function wireTripForm() {
       pace:        document.getElementById("pace")?.value               || "moderate",
       budget:      document.getElementById("budget")?.value             || "mid",
       habits:      document.getElementById("habits")?.value.trim()      || "",
-      meetpoints:  document.getElementById("meetpoints")?.value.trim()  || ""
+      meetpoints:  document.getElementById("meetpoints")?.value.trim()  || "",
+      coverUrl:    localStorage.getItem("rc_trip_cover")                || "",
+      genderPreference: document.getElementById("gender-preference")?.value || "any"
     };
 
     const { ok, data } = await apiPost("/api/trips", payload);
@@ -939,6 +1131,10 @@ function wireTripForm() {
 
 function restoreTripCard(trip) {
   if (!trip) return;
+  _currentTrip = trip; // keep a copy for the drawer
+  if (trip.coverUrl) {
+    try { localStorage.setItem("rc_trip_cover", trip.coverUrl); } catch {}
+  }
   const setTxt = (id, v) => { const el = document.getElementById(id); if (el && v !== undefined) el.textContent = v; };
   setTxt("tc-from",       trip.from       || "");
   setTxt("tc-to",         trip.to         || "");
@@ -957,6 +1153,8 @@ function restoreTripCard(trip) {
       .split(/[,\.]+/).map(h => h.trim()).filter(Boolean).slice(0, 6)
       .map(h => `<div class="habit-tag">${esc(h)}</div>`).join("");
   }
+  // Apply saved cover photo to the card thumbnail
+  loadSavedCover();
 }
 
 // ── Init ──────────────────────────────────────────────────────
@@ -965,9 +1163,226 @@ document.addEventListener("DOMContentLoaded", async () => {
   wireInput();
   wireNav();
   wireTripForm();
+  wireTripCard();
+  wireTravelerDrawer();
   loadAndRenderSuggestions();
   wireRealtimeEvents();  // Fix #10 — wire realtime.js custom events
 });
+
+// ── Trip detail drawer ────────────────────────────────────────
+
+let _currentTrip = null;
+
+const COVER_PHOTOS = [
+  { url: "https://images.unsplash.com/photo-1558981285-6f0c94958bb6?w=900&h=400&fit=crop",  label: "Himalayan Rd" },
+  { url: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=900&h=400&fit=crop", label: "Mountain Pass" },
+  { url: "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=900&h=400&fit=crop", label: "Valley View" },
+  { url: "https://images.unsplash.com/photo-1449824913935-59a10b8d2000?w=900&h=400&fit=crop", label: "Open Highway" },
+  { url: "https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=900&h=400&fit=crop", label: "Night Ride" },
+  { url: "https://images.unsplash.com/photo-1528360983277-13d401cdc186?w=900&h=400&fit=crop", label: "Spiti Valley" },
+  { url: "https://images.unsplash.com/photo-1501854140801-50d01698950b?w=900&h=400&fit=crop", label: "Aerial View" },
+  { url: "https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=900&h=400&fit=crop", label: "Coastal Road" },
+];
+
+function setTripCover(url) {
+  if (!url) return;
+  // Card thumbnail cover
+  const cardCover = document.getElementById("trip-card-cover");
+  if (cardCover) {
+    cardCover.style.backgroundImage =
+      `linear-gradient(to bottom,rgba(0,0,0,.1),rgba(18,18,18,.95)),url('${url}')`;
+    cardCover.style.backgroundSize   = "cover";
+    cardCover.style.backgroundPosition = "center";
+  }
+  // Drawer cover
+  const drawerCover = document.getElementById("td-cover");
+  if (drawerCover) {
+    drawerCover.style.backgroundImage =
+      `linear-gradient(to bottom,rgba(0,0,0,.15) 0%,rgba(18,18,18,.7) 60%,#141414 100%),url('${url}')`;
+    drawerCover.style.backgroundSize   = "cover";
+    drawerCover.style.backgroundPosition = "center";
+  }
+  try {
+    localStorage.setItem("rc_trip_cover", url);
+    if (_currentTrip) {
+      _currentTrip.coverUrl = url;
+      apiPost("/api/trips", {
+        source:      _currentTrip.from || "",
+        destination: _currentTrip.to   || "",
+        startDate:   _currentTrip.startDate || "",
+        endDate:     _currentTrip.endDate   || "",
+        tripType:    _currentTrip.tripType  || "motorcycle",
+        vehicle:     _currentTrip.vehicle   || "",
+        pace:        _currentTrip.pace      || "moderate",
+        budget:      _currentTrip.budget    || "mid",
+        habits:      _currentTrip.habits    || "",
+        meetpoints:  _currentTrip.meetpoints || "",
+        coverUrl:    url
+      });
+    }
+  } catch {}
+}
+
+function loadSavedCover() {
+  try {
+    const saved = localStorage.getItem("rc_trip_cover");
+    if (saved) setTripCover(saved);
+  } catch {}
+}
+
+function openTripDrawer() {
+  if (!_currentTrip) return;
+  const trip = _currentTrip;
+  const el  = id => document.getElementById(id);
+  const setT = (id, v) => { const e = el(id); if (e) e.textContent = v || "–"; };
+
+  setT("td-hero-from", trip.from);
+  setT("td-hero-to",   trip.to);
+
+  // Duration in days
+  let dayLabel = "–";
+  if (trip.startDate && trip.endDate) {
+    const ms = new Date(trip.endDate) - new Date(trip.startDate);
+    if (!isNaN(ms) && ms >= 0) dayLabel = Math.round(ms / 86_400_000) + "d";
+  }
+  setT("td-stat-days",   dayLabel);
+  setT("td-stat-pace",   trip.pace   ? trip.pace.charAt(0).toUpperCase()   + trip.pace.slice(1)   : "–");
+  setT("td-stat-budget", trip.budget ? trip.budget.charAt(0).toUpperCase() + trip.budget.slice(1) : "–");
+  const shortType = { motorcycle:"Moto", roadtrip:"Road", cycling:"Cycle",
+                       hiking:"Hike", backpacking:"Pack", train:"Train" };
+  setT("td-stat-type", shortType[trip.tripType] || trip.tripType || "–");
+
+  // Rows
+  setT("td-dates", trip.startDate && trip.endDate
+    ? `${trip.startDate}  →  ${trip.endDate}` : "–");
+  setT("td-vehicle-drawer",   trip.vehicle    || "–");
+  setT("td-meetpoints-drawer", trip.meetpoints || "–");
+
+  // Habits
+  const habSection = el("td-habits-section");
+  const habWrap    = el("td-habits-drawer");
+  if (habWrap) {
+    const tags = (trip.habits || "").split(/[,\.]+/).map(h => h.trim()).filter(Boolean).slice(0, 8);
+    habWrap.innerHTML = tags.map(h => `<div class="habit-tag">${esc(h)}</div>`).join("");
+    if (habSection) habSection.style.display = tags.length ? "" : "none";
+  }
+
+  // Apply saved cover to drawer
+  loadSavedCover();
+
+  // Open
+  el("trip-drawer-overlay")?.classList.add("open");
+  el("trip-drawer")?.classList.add("open");
+  document.body.style.overflow = "hidden";
+}
+
+function closeTripDrawer() {
+  document.getElementById("trip-drawer-overlay")?.classList.remove("open");
+  document.getElementById("trip-drawer")?.classList.remove("open");
+  // Collapse photo picker
+  const picker = document.getElementById("td-photo-picker");
+  if (picker) picker.style.display = "none";
+  document.body.style.overflow = "";
+}
+
+function initPhotoPicker() {
+  const grid = document.getElementById("td-photo-grid");
+  if (!grid || grid.dataset.ready) return; // only build once
+  grid.dataset.ready = "1";
+
+  let savedUrl = null;
+  try { savedUrl = localStorage.getItem("rc_trip_cover"); } catch {}
+
+  grid.innerHTML = COVER_PHOTOS.map(p => `
+    <button class="td-photo-thumb${savedUrl === p.url ? " selected" : ""}"
+            data-photo-url="${p.url}" title="${p.label}">
+      <img src="${p.url.replace("w=900&h=400", "w=200&h=150")}" alt="${p.label}" loading="lazy">
+      <span>${p.label}</span>
+    </button>
+  `).join("");
+
+  grid.querySelectorAll(".td-photo-thumb").forEach(btn => {
+    btn.addEventListener("click", () => {
+      grid.querySelectorAll(".td-photo-thumb").forEach(b => b.classList.remove("selected"));
+      btn.classList.add("selected");
+      setTripCover(btn.dataset.photoUrl);
+    });
+  });
+
+  const applyBtn = document.getElementById("td-custom-apply");
+  const urlInput = document.getElementById("td-custom-url");
+  const applyCustom = () => {
+    const url = urlInput?.value.trim();
+    if (!url) return;
+    grid.querySelectorAll(".td-photo-thumb").forEach(b => b.classList.remove("selected"));
+    setTripCover(url);
+  };
+  applyBtn?.addEventListener("click", applyCustom);
+  urlInput?.addEventListener("keydown", e => { if (e.key === "Enter") applyCustom(); });
+}
+
+function wireTripCard() {
+  const card = document.getElementById("my-trip-card");
+  if (!card) return;
+
+  // Open on click / keyboard
+  card.addEventListener("click", e => {
+    if (e.target.closest("a, button")) return;
+    openTripDrawer();
+  });
+  card.addEventListener("keydown", e => {
+    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openTripDrawer(); }
+  });
+
+  // Drawer controls
+  document.getElementById("td-close-btn")?.addEventListener("click", closeTripDrawer);
+  document.getElementById("trip-drawer-overlay")?.addEventListener("click", closeTripDrawer);
+  document.addEventListener("keydown", e => {
+    if (e.key === "Escape" && document.getElementById("trip-drawer")?.classList.contains("open")) {
+      closeTripDrawer();
+    }
+  });
+
+  // Photo picker toggle
+  document.getElementById("td-photo-btn")?.addEventListener("click", () => {
+    const picker = document.getElementById("td-photo-picker");
+    if (!picker) return;
+    const open = picker.style.display !== "none" && picker.style.display !== "";
+    if (open) {
+      picker.style.display = "none";
+    } else {
+      picker.style.display = "block";
+      initPhotoPicker();
+      setTimeout(() => picker.scrollIntoView({ behavior: "smooth", block: "nearest" }), 60);
+    }
+  });
+
+  // Edit btn — close drawer so the form is visible
+  document.getElementById("td-edit-btn")?.addEventListener("click", closeTripDrawer);
+
+  // Share btn
+  document.getElementById("td-share-btn")?.addEventListener("click", async () => {
+    const trip = _currentTrip;
+    if (!trip) return;
+    const text = `My trip: ${trip.from || "?"} → ${trip.to || "?"} on RoamCircle 🏍️`;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: "My RoamCircle Trip", text });
+      } else {
+        await navigator.clipboard.writeText(text);
+        const btn = document.getElementById("td-share-btn");
+        const orig = btn?.innerHTML;
+        if (btn) {
+          btn.textContent = "✓ Copied!";
+          setTimeout(() => { if (orig) btn.innerHTML = orig; }, 2000);
+        }
+      }
+    } catch {}
+  });
+
+  // Apply saved cover photo to card on init
+  loadSavedCover();
+}
 
 // Fix #10 — handle events dispatched by realtime.js via CustomEvent
 // This guarantees chat.js is fully initialised before any handler runs
@@ -980,6 +1395,7 @@ function wireRealtimeEvents() {
 
   // Mutual match confirmed — rebuild matches grid with fresh state
   document.addEventListener("rc:match_accepted", async e => {
+    await loadMutualMatches();
     const states = await loadMatchStates();
     const rid    = e.detail?.requesterId;
 
@@ -995,13 +1411,24 @@ function wireRealtimeEvents() {
       const { ok, data } = await apiGet(`/api/users/${encodeURIComponent(rid)}`);
       if (ok && data.userId) {
         realUserCache[rid] = {
-          userName:  data.userName,
-          avatarUrl: data.avatarUrl  || "",
-          from:      data.from,
-          to:        data.to,
-          vehicle:   data.vehicle,
-          startDate: data.startDate,
-          endDate:   data.endDate
+          userName:    data.userName,
+          displayName: data.displayName || data.userName,
+          avatarUrl:   data.avatarUrl   || "",
+          from:        data.from,
+          to:          data.to,
+          vehicle:     data.vehicle,
+          startDate:   data.startDate,
+          endDate:     data.endDate,
+          bio:         data.bio         || "",
+          lookingFor:  data.lookingFor  || "",
+          pace:        data.pace        || "moderate",
+          budget:      data.budget      || "mid",
+          tripType:    data.tripType    || "motorcycle",
+          habits:      data.habits      || "",
+          meetpoints:  data.meetpoints  || "",
+          coverUrl:    data.coverUrl    || "",
+          score:       data.score       || 80,
+          gender:      data.gender      || "unspecified"
         };
       }
     }
@@ -1019,7 +1446,9 @@ function wireRealtimeEvents() {
 
     if (isActive) {
       // Panel is open on this thread — reload messages silently
-      const requesterId = event.threadId.split("_").slice(1).join("_");
+      const parts       = event.threadId.split("_");
+      const myId        = await getMyUserId();
+      const requesterId = parts[0] === myId ? parts[1] : parts[0];
       const msgs        = await loadMessages(event.threadId);
       renderMsgs(msgs, requesterId);
     }
@@ -1030,5 +1459,207 @@ function wireRealtimeEvents() {
   document.addEventListener("rc:open_chat", e => {
     const { requesterId } = e.detail || {};
     if (requesterId) openChat(requesterId);
+  });
+}
+
+// ── Traveler profile drawer controller ────────────────────────
+async function openTravelerDrawer(id) {
+  const isDemo = isDemoId(id);
+  let traveler = null;
+
+  if (isDemo) {
+    traveler = getDemoData(id);
+  } else {
+    // If not in cache or missing bio, fetch safe public profile from backend
+    if (!realUserCache[id] || realUserCache[id].bio === undefined) {
+      const { ok, data } = await apiGet(`/api/users/${encodeURIComponent(id)}`);
+      if (ok && data.userId) {
+        realUserCache[id] = {
+          userId:      data.userId,
+          userName:    data.userName,
+          displayName: data.displayName || data.userName,
+          avatarUrl:   data.avatarUrl   || "",
+          from:        data.from        || "",
+          to:          data.to          || "",
+          startDate:   data.startDate   || "",
+          endDate:     data.endDate     || "",
+          vehicle:     data.vehicle     || "",
+          pace:        data.pace        || "moderate",
+          budget:      data.budget      || "mid",
+          tripType:    data.tripType    || "motorcycle",
+          habits:      data.habits      || "",
+          meetpoints:  data.meetpoints  || "",
+          coverUrl:    data.coverUrl    || "",
+          bio:         data.bio         || "",
+          lookingFor:  data.lookingFor  || "",
+          score:       data.score       || 80
+        };
+      }
+    }
+    traveler = realUserCache[id];
+  }
+
+  if (!traveler) return;
+
+  const el = id => document.getElementById(id);
+  const setT = (id, v) => { const e = el(id); if (e) e.textContent = v || "–"; };
+
+  // Set header / title / cover
+  setT("trd-hero-from", traveler.from || traveler.trip?.split(" → ")[0]);
+  setT("trd-hero-to",   traveler.to   || traveler.trip?.split(" → ")[1]);
+
+  const score = traveler.score || 80;
+  const matchBadge = el("trd-match-badge");
+  if (matchBadge) matchBadge.innerHTML = `<span class="status-dot"></span> ${score}% Match`;
+
+  // Apply cover photo
+  const coverEl = el("trd-cover");
+  if (coverEl) {
+    const coverUrl = traveler.cover || traveler.coverUrl || "https://images.unsplash.com/photo-1558981285-6f0c94958bb6?w=900&h=400&fit=crop";
+    coverEl.style.backgroundImage = `linear-gradient(to bottom,rgba(0,0,0,.15) 0%,rgba(18,18,18,.7) 60%,#141414 100%),url('${coverUrl}')`;
+    coverEl.style.backgroundSize = "cover";
+    coverEl.style.backgroundPosition = "center";
+  }
+
+  // Set avatar & name
+  const avatarImg = el("trd-avatar-img");
+  const avatarFall = el("trd-avatar-fallback");
+  const init = (traveler.displayName || traveler.userName || traveler.name || "?")[0].toUpperCase();
+
+  if (avatarImg && avatarFall) {
+    const url = traveler.face || traveler.avatarUrl;
+    if (url) {
+      avatarImg.src = url;
+      avatarImg.style.display = "block";
+      avatarFall.style.display = "none";
+      avatarImg.onerror = () => {
+        avatarImg.style.display = "none";
+        avatarFall.style.display = "flex";
+      };
+    } else {
+      avatarImg.style.display = "none";
+      avatarFall.style.display = "flex";
+      avatarFall.textContent = init;
+    }
+  }
+
+  setT("trd-name", traveler.displayName || traveler.userName || traveler.name);
+  setT("trd-username", `@${(traveler.userName || traveler.name || "rider").toLowerCase().replace(/\s+/g, "")}`);
+
+  // Duration in days
+  let dayLabel = "–";
+  const start = traveler.startDate || traveler.dates?.split("–")[0];
+  const end = traveler.endDate || traveler.dates?.split("–")[1];
+  if (start && end) {
+    const ms = new Date(end) - new Date(start);
+    if (!isNaN(ms) && ms >= 0) dayLabel = Math.round(ms / 86_400_000) + "d";
+  }
+  setT("trd-stat-days",   dayLabel);
+  setT("trd-stat-pace",   traveler.pace ? traveler.pace.charAt(0).toUpperCase() + traveler.pace.slice(1) : "Moderate");
+  setT("trd-stat-budget", traveler.budget ? traveler.budget.charAt(0).toUpperCase() + traveler.budget.slice(1) : "Mid");
+  
+  const shortType = { motorcycle: "Moto", roadtrip: "Road", cycling: "Cycle",
+                       hiking: "Hike", backpacking: "Pack", train: "Train" };
+  const typeVal = traveler.tripType || "motorcycle";
+  setT("trd-stat-type", shortType[typeVal] || typeVal);
+
+  // Bio and Looking for
+  setT("trd-bio", traveler.bio || "No biography provided yet.");
+  setT("trd-looking-for", traveler.lookingFor || "No partner preferences specified.");
+
+  // Rows
+  setT("trd-dates", start && end ? `${start} – ${end}` : traveler.dates || "–");
+  
+  const genderMap = { unspecified: "Prefer not to say", male: "Male", female: "Female", other: "Other / Non-binary" };
+  setT("trd-gender", genderMap[traveler.gender] || traveler.gender || "Prefer not to say");
+
+  setT("trd-vehicle", traveler.vehicle || "–");
+  setT("trd-meetpoints", traveler.meetpoints || "–");
+
+  // Habits Tags
+  const habitsWrap = el("trd-habits");
+  if (habitsWrap) {
+    const habitsStr = traveler.habits || "";
+    const tags = habitsStr.split(/[,\.]+/).map(h => h.trim()).filter(Boolean);
+    if (tags.length) {
+      habitsWrap.innerHTML = tags.map(h => `<div class="habit-tag">${esc(h)}</div>`).join("");
+      el("trd-habits-section").style.display = "";
+    } else {
+      habitsWrap.innerHTML = "";
+      el("trd-habits-section").style.display = "none";
+    }
+  }
+
+  // Actions bar inside drawer
+  const actionsWrap = el("trd-actions");
+  if (actionsWrap) {
+    // Check match status of this traveler
+    const matchStates = cacheGet("rc_matches") || {};
+    const status = matchStates[id];
+
+    if (status === "accept") {
+      actionsWrap.innerHTML = `
+        <button class="button primary" id="trd-chat-btn">💬 Open chat</button>
+      `;
+      el("trd-chat-btn")?.addEventListener("click", () => {
+        closeTravelerDrawer();
+        openChat(id);
+      });
+    } else if (status === "reject") {
+      actionsWrap.innerHTML = `<p style="color:#727272;font-size:0.9rem;text-align:center;width:100%">You declined this rider.</p>`;
+    } else {
+      // Pending request/suggestion
+      actionsWrap.innerHTML = `
+        <button class="button compact accept" id="trd-accept-btn">Accept Request</button>
+        <button class="button compact reject" id="trd-decline-btn">Decline</button>
+      `;
+      el("trd-accept-btn")?.addEventListener("click", async () => {
+        closeTravelerDrawer();
+        const actualCard = document.querySelector(`[data-request-card="${id}"]`);
+        if (actualCard) {
+          const btn = actualCard.querySelector("[data-request-action='accept']");
+          if (btn) btn.click();
+        } else {
+          await saveMatchState(id, "accept");
+          const updated = cacheGet("rc_matches") || {};
+          syncNav(updated);
+          rebuildMatchesGrid(updated);
+        }
+      });
+      el("trd-decline-btn")?.addEventListener("click", async () => {
+        closeTravelerDrawer();
+        const actualCard = document.querySelector(`[data-request-card="${id}"]`);
+        if (actualCard) {
+          const btn = actualCard.querySelector("[data-request-action='reject']");
+          if (btn) btn.click();
+        } else {
+          await saveMatchState(id, "reject");
+          const updated = cacheGet("rc_matches") || {};
+          syncNav(updated);
+          rebuildMatchesGrid(updated);
+        }
+      });
+    }
+  }
+
+  // Open Drawer
+  el("traveler-drawer-overlay")?.classList.add("open");
+  el("traveler-drawer")?.classList.add("open");
+  document.body.style.overflow = "hidden";
+}
+
+function closeTravelerDrawer() {
+  document.getElementById("traveler-drawer-overlay")?.classList.remove("open");
+  document.getElementById("traveler-drawer")?.classList.remove("open");
+  document.body.style.overflow = "";
+}
+
+function wireTravelerDrawer() {
+  document.getElementById("trd-close-btn")?.addEventListener("click", closeTravelerDrawer);
+  document.getElementById("traveler-drawer-overlay")?.addEventListener("click", closeTravelerDrawer);
+  document.addEventListener("keydown", e => {
+    if (e.key === "Escape" && document.getElementById("traveler-drawer")?.classList.contains("open")) {
+      closeTravelerDrawer();
+    }
   });
 }

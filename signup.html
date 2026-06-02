@@ -51,10 +51,19 @@
             <option value="backpacking">🎒 Backpacking</option>
           </select>
         </div>
+        <div class="field">
+          <label for="gender">Gender</label>
+          <select id="gender" name="gender">
+            <option value="unspecified" selected>Prefer not to say</option>
+            <option value="male">Male</option>
+            <option value="female">Female</option>
+            <option value="other">Other / Non-binary</option>
+          </select>
+        </div>
         <button class="button primary full" type="submit" id="submit-btn">Create account</button>
       </form>
       <p class="auth-note">Already have an account? <a href="login.html">Log in</a></p>
-    </section>
+      </section>
   </main>
 
   <script>
@@ -66,6 +75,7 @@
       const email    = document.getElementById("email").value.trim();
       const password = document.getElementById("password").value.trim();
       const tripType = document.getElementById("trip-type").value;
+      const gender   = document.getElementById("gender").value;
 
       errEl.style.display = "none";
 
@@ -82,7 +92,7 @@
         const res  = await fetch("/api/auth/signup", {
           method:  "POST",
           headers: { "Content-Type": "application/json" },
-          body:    JSON.stringify({ name, email, password, tripType })
+          body:    JSON.stringify({ name, email, password, tripType, gender })
         });
         const data = await res.json();
 

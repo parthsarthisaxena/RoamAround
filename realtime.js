@@ -188,15 +188,15 @@
             body:   preview,
             ts:     Date.now(),
             action: () => {
-              // Extract requesterId from threadId: {ownerUserId}_{requesterId}
-              const requesterId = event.threadId.split("_").slice(1).join("_");
+              // Extract requesterId from event.from (the sender)
+              const requesterId = event.from;
               dispatchRC("open_chat", { requesterId });
             }
           });
 
           // Mark the tab unread if panel is open on a different thread
           if (panelOpen) {
-            const requesterId = event.threadId.split("_").slice(1).join("_");
+            const requesterId = event.from;
             document.querySelector(`.chat-tab[data-thread="${requesterId}"]`)
               ?.classList.add("has-unread");
           }
