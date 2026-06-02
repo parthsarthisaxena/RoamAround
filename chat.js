@@ -123,13 +123,29 @@ const BOT_PREFIX  = "bot_";
 
 function isDemoId(id)  { return id.startsWith(DEMO_PREFIX); }
 
-function coverImageStyle(url) {
+function resolveTripCover(coverUrl, tripType, userId, demoCover) {
+  if (window.RC_tripCovers?.resolveCoverUrl) {
+    return window.RC_tripCovers.resolveCoverUrl(coverUrl, tripType, userId, demoCover);
+  }
+  const fallback = "https://images.unsplash.com/photo-1558981285-6f0c94958bb6?w=900&h=400&fit=crop&q=80";
+  return (coverUrl && String(coverUrl).trim().startsWith("http")) ? coverUrl.trim() : fallback;
+}
+
+function coverImageStyle(url, tripType, userId, demoCover) {
+  const resolved = resolveTripCover(url, tripType, userId, demoCover);
   const light = document.documentElement.getAttribute("data-theme") === "light";
   const grad = light
-    ? "linear-gradient(to bottom, rgba(255,255,255,0.08) 0%, rgba(229,241,248,0.94) 100%)"
-    : "linear-gradient(to bottom, rgba(0,0,0,0.12) 0%, rgba(18,18,18,0.88) 100%)";
-  return `${grad}, url('${url}')`;
+    ? "linear-gradient(to bottom, rgba(255,255,255,0.04) 0%, rgba(229,241,248,0.35) 100%)"
+    : "linear-gradient(to bottom, rgba(0,0,0,0.05) 0%, rgba(26,36,40,0.35) 100%)";
+  return `${grad}, url('${resolved.replace(/'/g, "%27")}')`;
 }
+
+function mpcCoverStyle(url, tripType, userId, demoCover) {
+  const resolved = resolveTripCover(url, tripType, userId, demoCover);
+  return `background-image:url('${resolved.replace(/'/g, "%27")}');background-size:cover;background-position:center`;
+}
+
+const TYPE_EMOJI = { motorcycle:"🏍️", roadtrip:"🚗", cycling:"🚴", hiking:"🥾", backpacking:"🎒", train:"🚆" };
 function demoKey(id)   { return id.startsWith(DEMO_PREFIX) ? id.slice(DEMO_PREFIX.length) : id; }
 function getDemoData(id) { return T[demoKey(id)] || null; }
 
@@ -655,18 +671,19 @@ function rebuildMatchesGrid(states) {
     const real     = realUserCache[id];
     const isMutual = isDemo || (window.rcMutualMatches && window.rcMutualMatches.has(id));
 
-    const name   = tv?.name  || real?.userName || "Rider";
-    const face   = tv?.face  || null;
-    const cover  = tv?.cover || null;
+    const name   = tv?.name  || real?.displayName || real?.userName || "Rider";
+    const face   = tv?.face  || real?.avatarUrl || null;
+    const tripType = tv?.tripType || real?.tripType || "motorcycle";
+    const coverRaw = real?.coverUrl || "";
+    const demoCover = tv?.cover || null;
     const init   = name[0]   || "?";
     const from   = tv ? tv.trip.split(" → ")[0] : (real?.from || "?");
     const to     = tv ? tv.trip.split(" → ")[1] : (real?.to   || "?");
     const veh    = tv?.vehicle || real?.vehicle || "";
     const dt     = tv?.dates   || (real ? `${real.startDate || ""} – ${real.endDate || ""}` : "");
+    const emoji  = TYPE_EMOJI[tripType] || "🌍";
 
-    const coverStyle = cover
-      ? `background-image:url('${esc(cover)}');background-size:cover;background-position:center`
-      : `background:linear-gradient(135deg,rgba(29,185,84,0.2),#1a1a2e)`;
+    const coverStyle = mpcCoverStyle(coverRaw, tripType, id, demoCover);
 
     const card = document.createElement("div");
     card.className = "match-profile-card";
@@ -693,7 +710,7 @@ function rebuildMatchesGrid(states) {
           </svg>
           <span class="to-pill">${esc(to)}</span>
         </div>
-        <div class="mpc-vehicle">🏍️ ${esc(veh)} · ${esc(dt)}</div>
+        <div class="mpc-vehicle">${emoji} ${esc(veh)} · ${esc(dt)}</div>
         ${!isMutual
           ? `<div class="mpc-pending-badge">⏳ Waiting for their accept</div>`
           : `<div class="mpc-mutual-badge">🎉 Mutual Match</div>`}
@@ -1196,10 +1213,8 @@ function wireTripForm() {
 
 function restoreTripCard(trip) {
   if (!trip) return;
-  _currentTrip = trip; // keep a copy for the drawer
-  if (trip.coverUrl) {
-    try { localStorage.setItem("rc_trip_cover", trip.coverUrl); } catch {}
-  }
+  _currentTrip = trip;
+  const tripType = trip.tripType || "motorcycle";
   const setTxt = (id, v) => { const el = document.getElementById(id); if (el && v !== undefined) el.textContent = v; };
   setTxt("tc-from",       trip.from       || "");
   setTxt("tc-to",         trip.to         || "");
@@ -1218,8 +1233,11 @@ function restoreTripCard(trip) {
       .split(/[,\.]+/).map(h => h.trim()).filter(Boolean).slice(0, 6)
       .map(h => `<div class="habit-tag">${esc(h)}</div>`).join("");
   }
-  // Apply saved cover photo to the card thumbnail
-  loadSavedCover();
+  getMyUserId().then(uid => {
+    const resolvedCover = resolveTripCover(trip.coverUrl, tripType, uid);
+    try { localStorage.setItem("rc_trip_cover", resolvedCover); } catch {}
+    setTripCover(resolvedCover, tripType);
+  });
 }
 
 // ── Init ──────────────────────────────────────────────────────
@@ -1234,8 +1252,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   wireRealtimeEvents();  // Fix #10 — wire realtime.js custom events
 
   document.addEventListener("rc:theme-changed", () => {
-    const saved = localStorage.getItem("rc_trip_cover");
-    if (saved) setTripCover(saved);
+    loadSavedCover();
   });
 });
 
@@ -1244,36 +1261,39 @@ document.addEventListener("DOMContentLoaded", async () => {
 let _currentTrip = null;
 
 const COVER_PHOTOS = [
-  { url: "https://images.unsplash.com/photo-1558981285-6f0c94958bb6?w=900&h=400&fit=crop",  label: "Himalayan Rd" },
-  { url: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=900&h=400&fit=crop", label: "Mountain Pass" },
-  { url: "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=900&h=400&fit=crop", label: "Valley View" },
-  { url: "https://images.unsplash.com/photo-1449824913935-59a10b8d2000?w=900&h=400&fit=crop", label: "Open Highway" },
-  { url: "https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=900&h=400&fit=crop", label: "Night Ride" },
-  { url: "https://images.unsplash.com/photo-1528360983277-13d401cdc186?w=900&h=400&fit=crop", label: "Spiti Valley" },
-  { url: "https://images.unsplash.com/photo-1501854140801-50d01698950b?w=900&h=400&fit=crop", label: "Aerial View" },
-  { url: "https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=900&h=400&fit=crop", label: "Coastal Road" },
+  { url: "https://images.unsplash.com/photo-1558981285-6f0c94958bb6?w=900&h=400&fit=crop&q=80", label: "Himalayan Rd" },
+  { url: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=900&h=400&fit=crop&q=80", label: "Mountain Pass" },
+  { url: "https://images.unsplash.com/photo-1449824913935-59a10b8d2000?w=900&h=400&fit=crop&q=80", label: "Open Highway" },
+  { url: "https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=900&h=400&fit=crop&q=80", label: "Camp Trail" },
+  { url: "https://images.unsplash.com/photo-1528360983277-13d401cdc186?w=900&h=400&fit=crop&q=80", label: "Spiti Valley" },
+  { url: "https://images.unsplash.com/photo-1501854140801-50d01698950b?w=900&h=400&fit=crop&q=80", label: "Aerial View" },
+  { url: "https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=900&h=400&fit=crop&q=80", label: "Coastal Road" },
+  { url: "https://images.unsplash.com/photo-1507035895480-2b3156c31fc8?w=900&h=400&fit=crop&q=80", label: "Cycle Tour" },
 ];
 
-function setTripCover(url) {
-  if (!url) return;
+async function setTripCover(url, tripType) {
+  const type = tripType || _currentTrip?.tripType || document.getElementById("trip-type")?.value || "motorcycle";
+  const uid = await getMyUserId().catch(() => null);
+  const resolved = resolveTripCover(url, type, uid);
+  if (!resolved) return;
   // Card thumbnail cover
   const cardCover = document.getElementById("trip-card-cover");
   if (cardCover) {
-    cardCover.style.backgroundImage = coverImageStyle(url);
+    cardCover.style.backgroundImage = coverImageStyle(resolved, type);
     cardCover.style.backgroundSize   = "cover";
     cardCover.style.backgroundPosition = "center";
   }
   // Drawer cover
   const drawerCover = document.getElementById("td-cover");
   if (drawerCover) {
-    drawerCover.style.backgroundImage = coverImageStyle(url);
+    drawerCover.style.backgroundImage = coverImageStyle(resolved, type);
     drawerCover.style.backgroundSize   = "cover";
     drawerCover.style.backgroundPosition = "center";
   }
   try {
-    localStorage.setItem("rc_trip_cover", url);
+    localStorage.setItem("rc_trip_cover", resolved);
     if (_currentTrip) {
-      _currentTrip.coverUrl = url;
+      _currentTrip.coverUrl = resolved;
       apiPost("/api/trips", {
         source:      _currentTrip.from || "",
         destination: _currentTrip.to   || "",
@@ -1285,7 +1305,7 @@ function setTripCover(url) {
         budget:      _currentTrip.budget    || "mid",
         habits:      _currentTrip.habits    || "",
         meetpoints:  _currentTrip.meetpoints || "",
-        coverUrl:    url
+        coverUrl:    resolved
       });
     }
   } catch {}
@@ -1293,8 +1313,14 @@ function setTripCover(url) {
 
 function loadSavedCover() {
   try {
-    const saved = localStorage.getItem("rc_trip_cover");
-    if (saved) setTripCover(saved);
+    const type = _currentTrip?.tripType || document.getElementById("trip-type")?.value || "motorcycle";
+    const fromTrip = _currentTrip?.coverUrl || "";
+    const saved = localStorage.getItem("rc_trip_cover") || "";
+    const fallback = window.RC_tripCovers?.coverForType?.(type) || "";
+    const pick = window.RC_tripCovers?.isUsableCover(fromTrip)
+      ? fromTrip
+      : (window.RC_tripCovers?.isUsableCover(saved) ? saved : fallback);
+    setTripCover(pick, type);
   } catch {}
 }
 
@@ -1584,8 +1610,10 @@ async function openTravelerDrawer(id) {
   // Apply cover photo
   const coverEl = el("trd-cover");
   if (coverEl) {
-    const coverUrl = traveler.cover || traveler.coverUrl || "https://images.unsplash.com/photo-1558981285-6f0c94958bb6?w=900&h=400&fit=crop";
-    coverEl.style.backgroundImage = coverImageStyle(coverUrl);
+    const tripType = traveler.tripType || "motorcycle";
+    const demoCover = traveler.cover || null;
+    const coverUrl = resolveTripCover(traveler.coverUrl || "", tripType, id, demoCover);
+    coverEl.style.backgroundImage = coverImageStyle(coverUrl, tripType, id, demoCover);
     coverEl.style.backgroundSize = "cover";
     coverEl.style.backgroundPosition = "center";
   }

@@ -136,17 +136,46 @@
         <div class="rc-reviews-list" id="rc-reviews-list"></div>
       </div>`);
 
-    document.getElementById("rc-reviews-close")?.addEventListener("click", closeReviewsModal);
+    const modal = document.getElementById("rc-reviews-modal");
+    modal?.addEventListener("click", e => {
+      if (e.target.closest("#rc-reviews-close")) {
+        e.preventDefault();
+        e.stopPropagation();
+        closeReviewsModal();
+      }
+    });
     document.getElementById("rc-reviews-overlay")?.addEventListener("click", closeReviewsModal);
     document.addEventListener("keydown", e => {
-      if (e.key === "Escape" && !document.getElementById("rc-reviews-modal")?.hidden) closeReviewsModal();
+      if (e.key === "Escape" && isReviewsModalOpen()) closeReviewsModal();
     });
   }
 
+  function isReviewsModalOpen() {
+    return document.getElementById("rc-reviews-modal")?.classList.contains("is-open");
+  }
+
+  function setReviewsModalOpen(open) {
+    const modal   = document.getElementById("rc-reviews-modal");
+    const overlay = document.getElementById("rc-reviews-overlay");
+    if (!modal) return;
+
+    if (open) {
+      modal.removeAttribute("hidden");
+      modal.classList.add("is-open");
+      overlay?.removeAttribute("hidden");
+      overlay?.classList.add("is-open");
+      document.body.style.overflow = "hidden";
+    } else {
+      modal.classList.remove("is-open");
+      modal.setAttribute("hidden", "");
+      overlay?.classList.remove("is-open");
+      overlay?.setAttribute("hidden", "");
+      document.body.style.overflow = "";
+    }
+  }
+
   function closeReviewsModal() {
-    document.getElementById("rc-reviews-modal")?.setAttribute("hidden", "");
-    document.getElementById("rc-reviews-overlay")?.setAttribute("hidden", "");
-    document.body.style.overflow = "";
+    setReviewsModalOpen(false);
   }
 
   async function openReviewsModal(userId, displayName) {
@@ -165,9 +194,7 @@
     sumEl.innerHTML     = "";
     listEl.innerHTML    = `<div class="rc-reviews-loading">Loading reviews…</div>`;
 
-    modal.removeAttribute("hidden");
-    overlay?.removeAttribute("hidden");
-    document.body.style.overflow = "hidden";
+    setReviewsModalOpen(true);
 
     const data = await fetchRatings(userId);
 

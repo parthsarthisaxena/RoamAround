@@ -12,8 +12,8 @@
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="theme-light.css">
 </head>
-<body>
-  <header class="topbar">
+<body class="page-home">
+  <header class="topbar" id="site-topbar">
     <a class="brand" href="/">
       <span class="brand-mark">R</span>
       <span>RoamCircle</span>
@@ -219,5 +219,14 @@
   </main>
 
   <script src="script.js"></script>
+  <script>
+    (function () {
+      const topbar = document.getElementById("site-topbar");
+      if (!topbar) return;
+      const onScroll = () => topbar.classList.toggle("is-scrolled", window.scrollY > 20);
+      onScroll();
+      window.addEventListener("scroll", onScroll, { passive: true });
+    })();
+  </script>
 </body>
 </html>
