@@ -108,7 +108,38 @@ async function connectDB() {
   );
   await db.collection("matches").createIndex({ requesterId: 1, state: 1 });
   await db.collection("messages").createIndex({ threadId: 1, createdAt: 1 });
+  await db.collection("reviews").createIndex({ reviewedUserId: 1, createdAt: -1 });
+  await db.collection("reviews").createIndex(
+    { reviewedUserId: 1, reviewerId: 1 }, { unique: true }
+  );
   console.log(`[db] MongoDB → ${MONGODB_URI}/${DB_NAME}`);
+}
+
+async function getRatingSummary(reviewedUserId) {
+  const rows = await db.collection("reviews")
+    .find({ reviewedUserId })
+    .sort({ createdAt: -1 })
+    .limit(50)
+    .toArray();
+
+  if (!rows.length) {
+    return { average: null, count: 0, reviews: [] };
+  }
+
+  const sum = rows.reduce((n, r) => n + (Number(r.rating) || 0), 0);
+  const average = Math.round((sum / rows.length) * 10) / 10;
+
+  return {
+    average,
+    count: rows.length,
+    reviews: rows.map(r => ({
+      reviewerId:   r.reviewerId,
+      reviewerName: r.reviewerName,
+      rating:       r.rating,
+      comment:      r.comment,
+      createdAt:    r.createdAt
+    }))
+  };
 }
 
 // ── MIME ─────────────────────────────────────────────────────
@@ -207,11 +238,18 @@ function clearAuthCookie() {
   });
 }
 
+// Thread IDs are "{idA}_{idB}" (sorted). Demo IDs contain underscores (e.g. demo_arjun),
+// so we must not split on the first "_" only.
 function validateThreadOwnership(threadId, userId) {
   if (!threadId || !userId) return false;
-  const sep = threadId.indexOf("_");
-  if (sep === -1) return false;
-  return threadId.slice(0, sep) === userId || threadId.slice(sep + 1) === userId;
+  return threadId.startsWith(`${userId}_`) || threadId.endsWith(`_${userId}`);
+}
+
+function peerFromThread(threadId, userId) {
+  if (!threadId || !userId) return null;
+  if (threadId.startsWith(`${userId}_`)) return threadId.slice(userId.length + 1);
+  if (threadId.endsWith(`_${userId}`)) return threadId.slice(0, threadId.length - userId.length - 1);
+  return null;
 }
 
 // ── Fix #6 — Normalize destination string ───────────────────
@@ -477,6 +515,8 @@ const handleUserGet = dbRoute(async (req, res, userId) => {
     }
   }
 
+  const { average: ratingAverage, count: ratingCount } = await getRatingSummary(userId);
+
   sendJson(res, 200, {
     userId:     userId,
     userName:   user.name,
@@ -495,8 +535,87 @@ const handleUserGet = dbRoute(async (req, res, userId) => {
     meetpoints: trip?.meetpoints || "",
     habits:     trip?.habits     || "",
     budget:     trip?.budget     || "",
-    coverUrl:   trip?.coverUrl   || ""
+    coverUrl:   trip?.coverUrl   || "",
+    ratingAverage,
+    ratingCount
   }, req);
+});
+
+// GET /api/users/:userId/reviews — public rating summary + comments
+const handleUserReviewsGet = dbRoute(async (req, res, userId) => {
+  const caller = requireUser(req, res); if (!caller) return;
+
+  if (userId.startsWith(DEMO_PREFIX)) {
+    return sendJson(res, 400, { error: "Demo profiles use client-side reviews." }, req);
+  }
+
+  const oid = toObjectId(userId);
+  if (!oid) return sendJson(res, 400, { error: "Invalid user ID." }, req);
+
+  const user = await db.collection("users").findOne({ _id: oid }, { projection: { _id: 1 } });
+  if (!user) return sendJson(res, 404, { error: "User not found." }, req);
+
+  sendJson(res, 200, await getRatingSummary(userId), req);
+});
+
+// POST /api/users/:userId/reviews — leave a review (mutual match required)
+const handleUserReviewPost = dbRoute(async (req, res, userId) => {
+  const caller = requireUser(req, res); if (!caller) return;
+  if (!rateLimit(req, res, 10, 60 * 60_000)) return;
+
+  if (userId.startsWith(DEMO_PREFIX)) {
+    return sendJson(res, 400, { error: "Cannot review demo profiles." }, req);
+  }
+  if (caller.userId === userId) {
+    return sendJson(res, 400, { error: "You cannot review yourself." }, req);
+  }
+
+  const oid = toObjectId(userId);
+  if (!oid) return sendJson(res, 400, { error: "Invalid user ID." }, req);
+
+  const theyAccepted = await db.collection("matches").findOne({
+    userId, requesterId: caller.userId, state: "accept"
+  });
+  const iAccepted = await db.collection("matches").findOne({
+    userId: caller.userId, requesterId: userId, state: "accept"
+  });
+  if (!theyAccepted || !iAccepted) {
+    return sendJson(res, 403, { error: "You can only review riders you mutually matched with." }, req);
+  }
+
+  const body    = await readBody(req);
+  const rating  = Number(body.rating);
+  const comment = String(body.comment || "").trim();
+
+  if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
+    return sendJson(res, 400, { error: "Rating must be an integer from 1 to 5." }, req);
+  }
+  if (comment.length < 10) {
+    return sendJson(res, 400, { error: "Comment must be at least 10 characters." }, req);
+  }
+  if (comment.length > 500) {
+    return sendJson(res, 400, { error: "Comment must be under 500 characters." }, req);
+  }
+
+  const doc = {
+    reviewedUserId: userId,
+    reviewerId:     caller.userId,
+    reviewerName:   caller.name,
+    rating,
+    comment,
+    createdAt:      new Date()
+  };
+
+  try {
+    await db.collection("reviews").insertOne(doc);
+  } catch (e) {
+    if (e.code === 11000) {
+      return sendJson(res, 409, { error: "You already reviewed this rider." }, req);
+    }
+    throw e;
+  }
+
+  sendJson(res, 201, { ok: true, ...(await getRatingSummary(userId)) }, req);
 });
 
 // ════════════════════════════════════════════════════════════
@@ -656,11 +775,18 @@ const handleMessagePost = dbRoute(async (req, res, threadId) => {
   const msg    = { threadId, from, fromName, text, type, meta, createdAt: new Date() };
   const result = await db.collection("messages").insertOne(msg);
 
-  // Push notification to the other user in the thread
-  const parts = threadId.split("_");
-  const otherUserId = parts[0] === from ? parts[1] : parts[0];
-  if (otherUserId && otherUserId !== from) {
-    push(otherUserId, {
+  // Push notification to the other participant (real users only)
+  let notifyUserId = null;
+  if (from.startsWith(BOT_PREFIX)) {
+    notifyUserId = user.userId;
+  } else {
+    notifyUserId = peerFromThread(threadId, from);
+    if (notifyUserId?.startsWith(DEMO_PREFIX) || notifyUserId?.startsWith(BOT_PREFIX)) {
+      notifyUserId = null;
+    }
+  }
+  if (notifyUserId && notifyUserId !== from) {
+    push(notifyUserId, {
       type: "new_message", threadId, from, fromName,
       text: type === "text" ? text : `[${type}]`,
       msgType: type, meta, ts: msg.createdAt.toISOString()
@@ -1155,7 +1281,15 @@ function router(req, res) {
   if (method === "GET"  && urlPath === "/api/auth/me")      return handleMe(req, res);
   if (method === "GET"  && urlPath === "/api/auth/token")   return handleAuthToken(req, res);
 
-  // Users — public profile
+  // Users — reviews before generic profile route
+  if (urlPath.startsWith("/api/users/") && urlPath.endsWith("/reviews")) {
+    const userId = decodeURIComponent(
+      urlPath.slice("/api/users/".length, -"/reviews".length)
+    );
+    if (method === "GET")  return handleUserReviewsGet(req, res, userId);
+    if (method === "POST") return handleUserReviewPost(req, res, userId);
+  }
+
   if (method === "GET" && urlPath.startsWith("/api/users/")) {
     const userId = decodeURIComponent(urlPath.slice("/api/users/".length));
     return handleUserGet(req, res, userId);

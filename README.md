@@ -44,7 +44,7 @@ npm install
 ```powershell
 $env:MONGODB_URI   = "mongodb://127.0.0.1:27017"
 $env:JWT_SECRET    = "any-long-random-string-here"
-$env:GEMINI_API_KEY = "YOUR_GEMINI_API_KEY_HERE"          # optional
+$env:OPENAI_API_KEY= "AIzaSyDRSqt9hY8fI5VtoNZTdKKvXUAJ52GUc0o"          # optional
 npm start
 ```
 
@@ -52,7 +52,7 @@ npm start
 ```bash
 MONGODB_URI="mongodb://127.0.0.1:27017" \
 JWT_SECRET="any-long-random-string-here" \
-GEMINI_API_KEY="YOUR_GEMINI_API_KEY_HERE" \
+OPENAI_API_KEY="AIzaSyDRSqt9hY8fI5VtoNZTdKKvXUAJ52GUc0o" \
 npm start
 ```
 

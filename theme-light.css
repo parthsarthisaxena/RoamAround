@@ -1,0 +1,304 @@
+/* Light theme — traveller-friendly overrides for dashboard + shared UI */
+
+/* SVG route arrows (inline hex in HTML) */
+[data-theme="light"] path[stroke="#1DB954"],
+[data-theme="light"] path[stroke="#1db954"],
+[data-theme="dark"] path[stroke="#1DB954"],
+[data-theme="dark"] path[stroke="#1db954"] {
+  stroke: var(--green);
+}
+
+/* Hero — warm morning-on-the-road feel */
+[data-theme="light"] .hero {
+  color: var(--heading);
+  background: var(--base);
+}
+
+[data-theme="light"] .hero-media {
+  background:
+    linear-gradient(to bottom, rgba(255,253,249,0.05) 0%, rgba(243,235,224,0.55) 50%, rgba(243,235,224,0.97) 100%),
+    linear-gradient(to right, rgba(255,253,249,0.88) 20%, transparent 72%),
+    url("https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1800&q=80");
+  background-size: cover;
+  background-position: center 30%;
+}
+
+[data-theme="light"] .hero h1,
+[data-theme="light"] .hero h2 {
+  color: var(--heading);
+  text-shadow: 0 1px 24px rgba(255,253,249,0.6);
+}
+
+[data-theme="light"] .hero p {
+  color: var(--text-sub);
+}
+
+[data-theme="light"] .band,
+[data-theme="light"] .overview,
+[data-theme="light"] .matching-flow {
+  background: var(--base);
+}
+
+[data-theme="light"] .cards article,
+[data-theme="light"] .board article,
+[data-theme="light"] .profile-grid article,
+[data-theme="light"] .auth-card,
+[data-theme="light"] .auth-panel {
+  background: var(--surface-1);
+  border-color: var(--line);
+  box-shadow: var(--shadow-card);
+}
+
+[data-theme="light"] .field input,
+[data-theme="light"] .field select,
+[data-theme="light"] .field textarea {
+  background: var(--input-bg);
+  border-color: var(--input-border);
+  color: var(--text-base);
+}
+
+[data-theme="light"] .field input:focus,
+[data-theme="light"] .field select:focus,
+[data-theme="light"] .field textarea:focus {
+  border-color: var(--green-a35);
+  box-shadow: 0 0 0 3px var(--green-a08);
+}
+
+[data-theme="light"] .rating-card {
+  background: var(--green-a08) !important;
+  border-color: var(--green-a25) !important;
+}
+
+[data-theme="light"] .rating-score strong {
+  color: var(--green);
+}
+
+[data-theme="light"] .rc-reviews-modal {
+  background: var(--surface-1);
+  border-color: var(--line);
+}
+
+[data-theme="light"] .rc-reviews-overlay {
+  background: var(--overlay);
+}
+
+[data-theme="light"] .rc-reviews-header h2,
+[data-theme="light"] .rc-review-author {
+  color: var(--heading);
+}
+
+[data-theme="light"] .rc-reviews-close {
+  background: var(--surface-2);
+  color: var(--heading);
+}
+
+[data-theme="light"] .rc-rating-badge {
+  background: var(--green-a08);
+  border-color: var(--green-a25);
+  color: var(--green-dim);
+}
+
+[data-theme="light"] .rc-rating-badge-count {
+  color: var(--text-muted);
+}
+
+/* ─── Dashboard (maps hardcoded colors → tokens) ─────────── */
+[data-theme="light"] .dashboard-hero {
+  background:
+    linear-gradient(135deg, var(--green-a12) 0%, transparent 55%),
+    linear-gradient(180deg, var(--surface-1) 0%, var(--base) 100%);
+  border-color: var(--line);
+}
+
+[data-theme="light"] .dashboard-hero h1 {
+  color: var(--heading);
+}
+
+[data-theme="light"] .trip-card,
+[data-theme="light"] .request-card,
+[data-theme="light"] .match-profile-card,
+[data-theme="light"] .real-rider-card,
+[data-theme="light"] .planner-zone,
+[data-theme="light"] .snippet-card {
+  background: var(--surface-1);
+  border-color: var(--line);
+  box-shadow: var(--shadow-card);
+}
+
+[data-theme="light"] .chat-panel,
+[data-theme="light"] .chat-header,
+[data-theme="light"] .chat-input-wrap {
+  background: var(--surface-1);
+  border-color: var(--line);
+}
+
+[data-theme="light"] .chat-messages {
+  background: var(--base);
+}
+
+[data-theme="light"] .chat-msg.mine .chat-bubble {
+  background: var(--green);
+  color: var(--text-on-accent);
+}
+
+[data-theme="light"] .chat-msg.theirs .chat-bubble {
+  background: var(--surface-2);
+  color: var(--text-base);
+  border: 1px solid var(--line);
+}
+
+[data-theme="light"] .chat-tab.active {
+  color: var(--heading);
+  border-bottom-color: var(--green);
+}
+
+[data-theme="light"] .trip-drawer,
+[data-theme="light"] .profile-drawer,
+[data-theme="light"] #traveler-drawer {
+  background: var(--surface-1);
+  color: var(--text-base);
+}
+
+[data-theme="light"] .td-cover,
+[data-theme="light"] #trd-cover {
+  border-color: var(--line);
+}
+
+[data-theme="light"] .td-stat-num,
+[data-theme="light"] .trd-name,
+[data-theme="light"] .mpc-name,
+[data-theme="light"] .rrc-name {
+  color: var(--heading);
+}
+
+[data-theme="light"] .nav-chat-btn.has-active {
+  background: var(--green);
+  color: var(--text-on-accent);
+  border-color: var(--green);
+}
+
+[data-theme="light"] .match-score,
+[data-theme="light"] .from-pill,
+[data-theme="light"] .to-pill,
+[data-theme="light"] .route-pill.to {
+  color: var(--green-dim);
+}
+
+[data-theme="light"] .from-pill,
+[data-theme="light"] .route-pill.from {
+  background: var(--surface-2);
+  color: var(--text-sub);
+}
+
+[data-theme="light"] .to-pill,
+[data-theme="light"] .route-pill.to {
+  background: var(--green-a12);
+  border-color: var(--green-a25);
+}
+
+[data-theme="light"] .profile-dropdown,
+[data-theme="light"] .notif-dropdown {
+  background: var(--surface-1);
+  border-color: var(--line);
+  box-shadow: var(--shadow-xl);
+}
+
+[data-theme="light"] .notif-item:hover {
+  background: var(--green-a08);
+}
+
+[data-theme="light"] .demo-divider span {
+  background: var(--base);
+  color: var(--text-muted);
+}
+
+[data-theme="light"] .planner-lock {
+  background: linear-gradient(180deg, var(--surface-2), var(--base));
+}
+
+[data-theme="light"] .habit-tag {
+  background: var(--surface-2);
+  border-color: var(--line);
+  color: var(--text-sub);
+}
+
+[data-theme="light"] .open-chat-btn,
+[data-theme="light"] .mpc-chat-btn:not(:disabled) {
+  background: var(--green);
+  color: var(--text-on-accent);
+}
+
+[data-theme="light"] .chat-header-trip,
+[data-theme="light"] .snippet-label,
+[data-theme="light"] .meet-label {
+  color: var(--green-dim);
+}
+
+[data-theme="light"] .profile-cover {
+  border-color: var(--line);
+}
+
+[data-theme="light"] .theme-toggle--auth {
+  margin-bottom: 16px;
+  width: 100%;
+  justify-content: center;
+}
+
+[data-theme="light"] .theme-toggle-wrap {
+  margin-left: auto;
+}
+
+[data-theme="light"] body.auth-page {
+  background: var(--base);
+}
+
+[data-theme="light"] .profile-edit-page,
+[data-theme="light"] .save-bar {
+  background: var(--base);
+}
+
+[data-theme="light"] .save-bar {
+  border-top-color: var(--line);
+}
+
+[data-theme="light"] .profile-avatar-section,
+[data-theme="light"] .profile-section {
+  background: var(--surface-1);
+  border-color: var(--line);
+}
+
+[data-theme="light"] .route-pill.from {
+  background: var(--surface-2);
+  color: var(--text-sub);
+  border-color: var(--line);
+}
+
+[data-theme="light"] .chat-msg.theirs .chat-bubble {
+  color: var(--text-base);
+}
+
+[data-theme="light"] .chat-bubble.route-share,
+[data-theme="light"] .route-share-title {
+  color: var(--text-base);
+}
+
+[data-theme="light"] .chat-input-wrap textarea,
+[data-theme="light"] .chat-input-wrap input {
+  color: var(--text-base);
+}
+
+/* Softer feature card accents in light mode */
+[data-theme="light"] .mini-card.coral::before {
+  background: linear-gradient(135deg, #c97b6d, #d4a574);
+  box-shadow: 0 4px 14px rgba(180,120,90,0.25);
+}
+
+[data-theme="light"] .mini-card.violet::before {
+  background: linear-gradient(135deg, #8a9bb5, #6d8f9a);
+  box-shadow: 0 4px 14px rgba(109,143,154,0.25);
+}
+
+[data-theme="light"] .mini-card.blue::before {
+  background: linear-gradient(135deg, #6d8f9a, #7a9e8e);
+  box-shadow: 0 4px 14px rgba(90,120,110,0.22);
+}

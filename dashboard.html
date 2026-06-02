@@ -7,7 +7,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;700;800&family=Fraunces:opsz,wght@9..144,700;9..144,800&display=swap" rel="stylesheet">
+  <script src="theme.js"></script>
   <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="theme-light.css">
   <link rel="stylesheet" href="dashboard.css">
 <style>
     /* ── Mobile nav overflow fix ───────────────────────── */
@@ -216,6 +218,7 @@
         <div class="trd-profile-name-wrap">
           <h2 class="trd-name" id="trd-name">–</h2>
           <p class="trd-username" id="trd-username">@rider</p>
+          <div id="trd-rating-wrap"></div>
         </div>
       </div>
 
@@ -387,6 +390,7 @@
         <input type="file" id="prd-avatar-file" accept="image/*" style="display:none">
         <div class="prd-avatar-info">
           <div class="prd-avatar-name" id="prd-avatar-name">Your name</div>
+          <div id="prd-rating-wrap"></div>
           <div class="prd-avatar-hint">Click avatar to upload · or paste URL below</div>
           <div class="prd-url-row">
             <input type="url" id="prd-avatar-url" class="prd-input" placeholder="https://your-image-url.com/photo.jpg">
@@ -1008,6 +1012,18 @@
       updatePrdCharCounts();
       setPrdStatus("No unsaved changes", "");
       _prdDirty = false;
+
+      const userId = p._id ? String(p._id) : "";
+      const prdRating = document.getElementById("prd-rating-wrap");
+      if (prdRating && window.RC_ratings && userId) {
+        prdRating.innerHTML = "";
+        const ratingData = await RC_ratings.fetchRatings(userId);
+        if (RC_ratings.hasRating(ratingData)) {
+          await RC_ratings.mountBadge(prdRating, userId, displayName);
+        } else {
+          prdRating.innerHTML = `<span style="color:#727272;font-size:0.82rem;font-weight:600">No reviews yet</span>`;
+        }
+      }
     }
 
     function updatePrdCharCounts() {
@@ -1149,6 +1165,7 @@
   <script src="animate.js"></script>
   <script src="realtime.js"></script>
   <script src="script.js"></script>
+  <script src="ratings.js"></script>
   <script src="chat.js"></script>
 </body>
 </html>

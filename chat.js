@@ -125,6 +125,19 @@ function isDemoId(id)  { return id.startsWith(DEMO_PREFIX); }
 function demoKey(id)   { return id.startsWith(DEMO_PREFIX) ? id.slice(DEMO_PREFIX.length) : id; }
 function getDemoData(id) { return T[demoKey(id)] || null; }
 
+function canChatWith(requesterId) {
+  if (isDemoId(requesterId)) return true;
+  return !!(window.rcMutualMatches && window.rcMutualMatches.has(requesterId));
+}
+
+// Parse the other participant from a threadId (handles demo_arjun in the id)
+function peerFromThread(threadId, myId) {
+  if (!threadId || !myId) return null;
+  if (threadId.startsWith(`${myId}_`)) return threadId.slice(myId.length + 1);
+  if (threadId.endsWith(`_${myId}`)) return threadId.slice(0, threadId.length - myId.length - 1);
+  return null;
+}
+
 // ── State ─────────────────────────────────────────────────────
 let active      = null;
 let myUserId    = null;
@@ -296,7 +309,7 @@ function renderMsgs(msgs, requesterId, isLoadMore = false) {
   const hasMore = activeTid && window._rcThreadHasMore[activeTid];
   if (hasMore) {
     html = `<div class="chat-load-more-wrap" style="text-align:center;padding:15px 0 5px">
-      <button class="button compact" id="chat-load-more-btn" style="background:rgba(29,185,84,0.1);color:#1DB954;border:1px solid rgba(29,185,84,0.3);border-radius:20px;padding:4px 12px;font-size:0.75rem;font-weight:700;cursor:pointer;transition:all 0.2s">Load older messages</button>
+      <button class="button compact rc-load-more-btn" id="chat-load-more-btn">Load older messages</button>
     </div>` + html;
   }
 
@@ -345,6 +358,8 @@ function scrollBottom(smooth = true) {
 // ── Send + bot reply ──────────────────────────────────────────
 async function sendMsg(requesterId, text, type = "text", meta = {}) {
   if (type === "text" && !text.trim()) return;
+  await loadMutualMatches();
+  if (!canChatWith(requesterId)) return;
   const tid = await threadId(requesterId);
   if (!tid) return;
 
@@ -396,8 +411,27 @@ function scheduleReply(requesterId, tid) {
 
 // ── Open chat — works for both demo and real users ────────────
 async function openChat(requesterId) {
-  active = requesterId;
   await getMyUserId();
+  await loadMutualMatches();
+
+  if (!canChatWith(requesterId)) {
+    active = null;
+    const box = document.getElementById("chat-messages");
+    document.getElementById("chat-panel")?.classList.add("open");
+    document.getElementById("chat-overlay")?.classList.add("open");
+    document.body.style.overflow = "hidden";
+    window._rcActiveThread = null;
+    if (box) {
+      box.innerHTML = `
+        <div class="chat-empty">
+          <div class="chat-empty-icon">⏳</div>
+          <p>Waiting for them to accept you back.<br>Chat opens once you both accept.</p>
+        </div>`;
+    }
+    return;
+  }
+
+  active = requesterId;
 
   const isDemo = isDemoId(requesterId);
   const tv     = isDemo ? getDemoData(requesterId) : null;
@@ -525,7 +559,7 @@ function buildTabs(currentId) {
       <button class="chat-tab${id === currentId ? " active" : ""}" data-thread="${id}">
         ${face
           ? `<img class="chat-tab-face" src="${esc(face)}" alt="${init}" onerror="this.style.display='none'">`
-          : `<div class="chat-tab-face" style="display:grid;place-items:center;background:linear-gradient(135deg,#1DB954,#0ea5e9);color:#000;font-weight:800;font-size:0.7rem;border-radius:50%">${init}</div>`
+          : `<div class="chat-tab-face rc-avatar-fallback">${init}</div>`
         }
         ${esc(name)}
       </button>`;
@@ -630,7 +664,7 @@ function rebuildMatchesGrid(states) {
     card.className = "match-profile-card";
     card.innerHTML = `
       <div class="mpc-cover" style="${coverStyle};position:relative">
-        <div style="position:absolute;inset:0;background:linear-gradient(to bottom,transparent 30%,#181818 100%)"></div>
+        <div class="mpc-cover-fade"></div>
       </div>
       <div class="mpc-body">
         <div class="mpc-face-wrap">
@@ -642,6 +676,7 @@ function rebuildMatchesGrid(states) {
           }
         </div>
         <div class="mpc-name">${esc(name)}</div>
+        <div class="mpc-rating-slot" data-rating-user="${esc(id)}"></div>
         <div class="mpc-route">
           <span class="from-pill">${esc(from)}</span>
           <svg width="22" height="8" viewBox="0 0 22 8">
@@ -653,8 +688,8 @@ function rebuildMatchesGrid(states) {
         <div class="mpc-vehicle">🏍️ ${esc(veh)} · ${esc(dt)}</div>
         ${!isMutual
           ? `<div class="mpc-pending-badge">⏳ Waiting for their accept</div>`
-          : `<div class="mpc-mutual-badge" style="color:#1DB954;font-size:0.72rem;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;margin-bottom:6px">🎉 Mutual Match</div>`}
-        <button class="mpc-chat-btn" data-open-chat="${id}" ${!isMutual ? "disabled style='background:#333;color:#727272;cursor:not-allowed;transform:none'" : ""}>
+          : `<div class="mpc-mutual-badge">🎉 Mutual Match</div>`}
+        <button class="mpc-chat-btn" data-open-chat="${id}" ${!isMutual ? "disabled class='mpc-chat-btn is-disabled'" : ""}>
           <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
             <path d="M20 2H4a2 2 0 0 0-2 2v18l4-4h14a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2z"/>
           </svg>
@@ -668,6 +703,10 @@ function rebuildMatchesGrid(states) {
       if (e.target.closest("button, a")) return;
       openTravelerDrawer(id);
     });
+    const mpcRating = card.querySelector(".mpc-rating-slot");
+    if (mpcRating && window.RC_ratings) {
+      RC_ratings.mountBadge(mpcRating, id, name);
+    }
     grid.appendChild(card);
   });
 
@@ -732,7 +771,7 @@ function applyRealAccepted(card, userId, states) {
     if (isMutual) {
       act.innerHTML = `
         <p class="request-status-text">Mutual match! 🎉</p>
-        <button class="open-chat-btn" data-open-chat="${userId}" style="margin-top:6px;background:#1DB954;color:#000;border:none;border-radius:20px;padding:6px 16px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:4px">
+        <button class="open-chat-btn rc-open-chat-btn" data-open-chat="${userId}">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
             <path d="M20 2H4a2 2 0 0 0-2 2v18l4-4h14a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2z"/>
           </svg>
@@ -745,7 +784,7 @@ function applyRealAccepted(card, userId, states) {
     } else {
       act.innerHTML = `
         <p class="request-status-text">Request sent ✓</p>
-        <p style="color:#b3b3b3;font-size:0.8rem;margin:4px 0 0">
+        <p class="rc-pending-note">
           Waiting for them to accept you back
         </p>`;
     }
@@ -884,7 +923,10 @@ function renderRealCard(s, existingState) {
       <!-- Right: content column -->
       <div class="rrc-content">
         <div class="rrc-header">
-          <div class="rrc-name">${esc(s.userName)}</div>
+          <div class="rrc-name-row">
+            <div class="rrc-name">${esc(s.userName)}</div>
+            <div class="rrc-rating-slot" data-rating-user="${esc(s.userId)}"></div>
+          </div>
           <div class="rrc-badges">
             <span class="match-score" style="background:rgba(56,189,248,0.1);border-color:rgba(56,189,248,0.3);color:#38bdf8;font-size:0.68rem">Real rider</span>
             ${nearbyHtml}
@@ -923,6 +965,11 @@ function renderRealCard(s, existingState) {
 
   list.appendChild(card);
 
+  const ratingSlot = card.querySelector(".rrc-rating-slot");
+  if (ratingSlot && window.RC_ratings) {
+    RC_ratings.mountBadge(ratingSlot, s.userId, s.userName);
+  }
+
   if (existingState === "accept")  applyRealAccepted(card, s.userId);
   else if (existingState === "reject") dismissCard(card, false); // already decided — remove silently
 
@@ -932,8 +979,10 @@ function renderRealCard(s, existingState) {
       const action = btn.dataset.requestAction;
       await saveMatchState(s.userId, action);
       const updated = cacheGet("rc_matches") || {};
-      if (action === "accept") applyRealAccepted(card, s.userId, updated);
-      else applyRealRejected(card, updated);
+      if (action === "accept") {
+        applyRealAccepted(card, s.userId, updated);
+        if (canChatWith(s.userId)) openChat(s.userId);
+      } else applyRealRejected(card, updated);
     } else if (!e.target.closest("button, a")) {
       openTravelerDrawer(s.userId);
     }
@@ -980,6 +1029,14 @@ async function wireCards() {
 
   document.querySelectorAll("[data-request-card]").forEach(card => {
     const id = card.dataset.requestCard;
+    const reqInfo = card.querySelector(".req-info");
+    if (reqInfo && window.RC_ratings && !card.querySelector(".req-rating-slot")) {
+      const slot = document.createElement("div");
+      slot.className = "req-rating-slot";
+      reqInfo.appendChild(slot);
+      const name = card.dataset.travelerName || getDemoData(id)?.name || "Rider";
+      RC_ratings.mountBadge(slot, id, name);
+    }
     if (states[id] === "accept")  applyAccepted(card, id, states);
     else if (states[id] === "reject") dismissCard(card, false); // already decided — remove silently
 
@@ -1048,7 +1105,7 @@ function wireNav() {
       const sec = document.getElementById("requests-section");
       if (sec) {
         sec.scrollIntoView({ behavior: "smooth", block: "start" });
-        sec.style.outline = "2px solid #1DB954";
+        sec.style.outline = "2px solid var(--green)";
         sec.style.outlineOffset = "8px";
         setTimeout(() => { sec.style.outline = ""; sec.style.outlineOffset = ""; }, 1800);
       }
@@ -1435,6 +1492,8 @@ function wireRealtimeEvents() {
 
     syncNav(states);
     rebuildMatchesGrid(states);
+
+    if (rid && canChatWith(rid)) openChat(rid);
   });
 
   // New message arrived in a thread
@@ -1445,10 +1504,9 @@ function wireRealtimeEvents() {
     const isActive    = panelOpen && window._rcActiveThread === event.threadId;
 
     if (isActive) {
-      // Panel is open on this thread — reload messages silently
-      const parts       = event.threadId.split("_");
       const myId        = await getMyUserId();
-      const requesterId = parts[0] === myId ? parts[1] : parts[0];
+      const requesterId = peerFromThread(event.threadId, myId);
+      if (!requesterId) return;
       const msgs        = await loadMessages(event.threadId);
       renderMsgs(msgs, requesterId);
     }
@@ -1543,8 +1601,17 @@ async function openTravelerDrawer(id) {
     }
   }
 
-  setT("trd-name", traveler.displayName || traveler.userName || traveler.name);
+  const displayName = traveler.displayName || traveler.userName || traveler.name;
+  setT("trd-name", displayName);
   setT("trd-username", `@${(traveler.userName || traveler.name || "rider").toLowerCase().replace(/\s+/g, "")}`);
+
+  const ratingWrap = el("trd-rating-wrap");
+  if (ratingWrap) {
+    ratingWrap.innerHTML = "";
+    if (window.RC_ratings) {
+      await RC_ratings.mountBadge(ratingWrap, id, displayName);
+    }
+  }
 
   // Duration in days
   let dayLabel = "–";
@@ -1598,13 +1665,20 @@ async function openTravelerDrawer(id) {
     const status = matchStates[id];
 
     if (status === "accept") {
-      actionsWrap.innerHTML = `
-        <button class="button primary" id="trd-chat-btn">💬 Open chat</button>
-      `;
-      el("trd-chat-btn")?.addEventListener("click", () => {
-        closeTravelerDrawer();
-        openChat(id);
-      });
+      if (canChatWith(id)) {
+        actionsWrap.innerHTML = `
+          <button class="button primary" id="trd-chat-btn">💬 Open chat</button>
+        `;
+        el("trd-chat-btn")?.addEventListener("click", () => {
+          closeTravelerDrawer();
+          openChat(id);
+        });
+      } else {
+        actionsWrap.innerHTML = `
+          <p style="color:#b3b3b3;font-size:0.9rem;text-align:center;width:100%">
+            Request sent — waiting for them to accept you back
+          </p>`;
+      }
     } else if (status === "reject") {
       actionsWrap.innerHTML = `<p style="color:#727272;font-size:0.9rem;text-align:center;width:100%">You declined this rider.</p>`;
     } else {
@@ -1624,6 +1698,7 @@ async function openTravelerDrawer(id) {
           const updated = cacheGet("rc_matches") || {};
           syncNav(updated);
           rebuildMatchesGrid(updated);
+          if (canChatWith(id)) openChat(id);
         }
       });
       el("trd-decline-btn")?.addEventListener("click", async () => {

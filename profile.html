@@ -7,7 +7,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;700;800&family=Fraunces:opsz,wght@9..144,700;9..144,800&display=swap" rel="stylesheet">
+  <script src="theme.js"></script>
   <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="theme-light.css">
   <style>
     .profile-edit-page {
       max-width: 680px;
@@ -21,8 +23,8 @@
       align-items: center;
       gap: 16px;
       padding: 32px;
-      background: #181818;
-      border: 1px solid rgba(255,255,255,0.07);
+      background: var(--surface-1);
+      border: 1px solid var(--line);
       border-radius: 20px;
       margin-bottom: 24px;
     }
@@ -34,7 +36,7 @@
       object-fit: cover;
       border: 3px solid rgba(29,185,84,0.5);
       box-shadow: 0 8px 32px rgba(29,185,84,0.25);
-      background: linear-gradient(135deg, #1DB954, #0ea5e9);
+      background: linear-gradient(135deg, var(--green), var(--accent-sky));
       display: flex;
       align-items: center;
       justify-content: center;
@@ -73,7 +75,7 @@
       transition: opacity 0.2s;
       font-size: 0.75rem;
       font-weight: 700;
-      color: #fff;
+      color: var(--text-on-accent);
       flex-direction: column;
       gap: 4px;
     }
@@ -108,15 +110,15 @@
     }
 
     .profile-section {
-      background: #181818;
-      border: 1px solid rgba(255,255,255,0.07);
+      background: var(--surface-1);
+      border: 1px solid var(--line);
       border-radius: 16px;
       padding: 24px;
       margin-bottom: 16px;
     }
 
     .profile-section h3 {
-      color: #fff;
+      color: var(--heading);
       font-size: 1rem;
       font-weight: 800;
       margin-bottom: 6px;
@@ -159,7 +161,7 @@
       flex: 1;
     }
 
-    .save-status.ok   { color: #1DB954; }
+    .save-status.ok   { color: var(--green); }
     .save-status.err  { color: #f43f5e; }
 
     .ai-suggestion-btn {
@@ -170,7 +172,7 @@
       border-radius: 500px;
       background: rgba(29,185,84,0.1);
       border: 1px solid rgba(29,185,84,0.3);
-      color: #1DB954;
+      color: var(--green);
       font-size: 0.8rem;
       font-weight: 700;
       cursor: pointer;
@@ -219,6 +221,12 @@
         </div>
       </div>
 
+      <!-- Rider rating (reviews from others) -->
+      <div class="profile-section" id="my-reviews-section">
+        <h3>Your rider rating</h3>
+        <p class="section-hint">Loading…</p>
+      </div>
+
       <!-- Display name -->
       <div class="profile-section">
         <h3>Display name</h3>
@@ -265,6 +273,7 @@
     <button class="button primary" id="save-btn" onclick="saveProfile()">Save profile</button>
   </div>
 
+  <script src="ratings.js"></script>
   <script>
     let currentAvatarUrl = "";
     let profileLoaded    = false;
@@ -444,6 +453,9 @@
     }
 
     loadProfile();
+    document.addEventListener("DOMContentLoaded", () => {
+      if (window.RC_ratings) RC_ratings.initOwnProfilePage();
+    });
   </script>
 </body>
 </html>
