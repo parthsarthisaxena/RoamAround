@@ -6,7 +6,6 @@
  *  - Parallax tilt on cards (desktop only)
  *  - Ripple effect on buttons
  ─────────────────────────────────────────────────────────────── */
-//uihuihiuihiijoooholh
 (function () {
   "use strict";
 
@@ -192,13 +191,15 @@
   // ── Smooth page transitions on link clicks ─────────────────
   function initPageTransitions() {
     document.addEventListener("click", e => {
+      if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
       const link = e.target.closest("a[href]");
       if (!link) return;
 
       const href = link.getAttribute("href");
-      // Only internal .html pages, not anchors or external
+      // Only internal .html pages, not anchors, javascript, or external
       if (!href || href.startsWith("#") || href.startsWith("http") ||
-          href.startsWith("mailto") || link.target === "_blank") return;
+          href.startsWith("mailto") || href.startsWith("javascript:") ||
+          link.target === "_blank" || link.hasAttribute("download")) return;
 
       e.preventDefault();
       document.body.style.opacity    = "0";

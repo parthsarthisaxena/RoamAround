@@ -1,0 +1,26 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Mock Razorpay Checkout</title>
+<style>
+body{background:#0b0f14;color:#eee;font-family:system-ui;display:grid;place-items:center;height:100vh;margin:0}
+.card{background:#161b22;border:1px solid #2a2f36;border-radius:16px;padding:32px;text-align:center;max-width:340px}
+button{background:#1a9e4a;color:#fff;border:0;border-radius:999px;padding:12px 28px;font-weight:800;font-size:1rem;cursor:pointer}
+</style></head>
+<body><div class="card">
+<div style="font-size:2rem">💳</div>
+<h2 style="margin:8px 0">Mock Razorpay Checkout</h2>
+<p id="ref" style="color:#8b949e;font-size:.75rem;word-break:break-all"></p>
+<p style="font-size:.9rem">Good-faith deposit · <strong>₹1,000</strong> (test mode)</p>
+<button id="pay">Pay ₹1,000</button>
+<p id="status" style="color:#8b949e;font-size:.8rem;margin-top:12px"></p>
+</div>
+<script>
+const ref = new URLSearchParams(location.search).get("ref") || "";
+document.getElementById("ref").textContent = "ref: " + ref;
+document.getElementById("pay").addEventListener("click", async () => {
+  const r = await fetch("/api/mock/pay", { method: "POST", credentials: "include",
+    headers: { "Content-Type": "application/json" }, body: JSON.stringify({ reference_id: ref }) });
+  const d = await r.json().catch(() => ({}));
+  document.getElementById("status").textContent =
+    r.ok ? "✓ Paid — webhook delivered. Close this tab and check the chat." : "✗ " + (d.error || "failed");
+});
+</script></body></html>

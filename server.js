@@ -12,6 +12,7 @@
  */
 
 "use strict";
+require("dotenv").config();
 const http      = require("node:http");
 const fs        = require("node:fs/promises");
 const path      = require("node:path");
@@ -20,13 +21,22 @@ const jwt       = require("jsonwebtoken");
 const cookieLib = require("cookie");
 const { MongoClient, ObjectId } = require("mongodb");
 const { WebSocketServer, WebSocket } = require("ws");
-
+const { scoreCompatibility } = require("./scoring.js");
+const { rankWithAI }         = require("./ai_matcher.js");
+const deposits               = require("./deposits.js");
 // ── Config ───────────────────────────────────────────────────
 const PORT        = Number(process.env.PORT        || 3000);
 const MONGODB_URI = process.env.MONGODB_URI        || "mongodb://127.0.0.1:27017";
-const JWT_SECRET  = process.env.JWT_SECRET         || "roamcircle-dev-secret-change-in-prod";
+const JWT_SECRET  = String(process.env.JWT_SECRET || "").trim();
 const GEMINI_KEY  = process.env.GEMINI_API_KEY      || "";
 const GEMINI_MODEL = process.env.GEMINI_MODEL        || "gemini-2.0-flash";
+const WEAK_JWT = /^(roamcircle-dev-secret-change-in-prod|change-this-to-a-long-random-string|any-long-random-string-here)$/i;
+if (!JWT_SECRET || JWT_SECRET.length < 32 || WEAK_JWT.test(JWT_SECRET)) {
+  console.error("[boot] JWT_SECRET is missing or too weak. Put a 32+ character random value in .env:");
+  console.error('  node -e "console.log(require(\'crypto\').randomBytes(48).toString(\'hex\'))"');
+  process.exit(1);
+}
+const TRUST_PROXY = /^(1|true|yes)$/i.test(process.env.TRUST_PROXY || "");
 const DB_NAME     = "roamcircle";
 const PUBLIC_DIR  = __dirname;
 const SALT_ROUNDS = 12;
@@ -41,8 +51,13 @@ const ALLOWED_ORIGINS = new Set(
 
 const PROTECTED_PAGES = [
   "/dashboard.html", "/profile-arjun.html", "/profile-priya.html",
-  "/profile-rohan.html", "/profile.html"
+  "/profile-rohan.html", "/profile.html", "/mock-pay.html"
 ];
+
+const BLOCKED_STATIC = new Set([
+  "/server.js", "/deposits.js", "/scoring.js", "/ai_matcher.js",
+  "/package.json", "/package-lock.json", "/.env", "/.env.example", "/start"
+]);
 
 const DEMO_PREFIX = "demo_";
 const BOT_PREFIX  = "bot_";
@@ -51,10 +66,16 @@ const BOT_PREFIX  = "bot_";
 // Map<ip, { count, resetAt }>
 const rateLimitStore = new Map();
 
+function clientIp(req) {
+  if (TRUST_PROXY) {
+    const xf = req.headers["x-forwarded-for"];
+    if (typeof xf === "string" && xf.trim()) return xf.split(",")[0].trim();
+  }
+  return req.socket.remoteAddress || "unknown";
+}
+
 function rateLimit(req, res, maxRequests, windowMs) {
-  const ip  = req.headers["x-forwarded-for"]?.split(",")[0].trim()
-             || req.socket.remoteAddress
-             || "unknown";
+  const ip  = clientIp(req);
   const key = `${ip}:${req.url}`;
   const now = Date.now();
   const rec = rateLimitStore.get(key) || { count: 0, resetAt: now + windowMs };
@@ -85,6 +106,18 @@ function rateLimit(req, res, maxRequests, windowMs) {
 }
 
 // ── Fix #2 — Safe ObjectId helper ───────────────────────────
+function redactMongoUri(uri) {
+  const raw = String(uri || "");
+  try {
+    const u = new URL(raw);
+    if (u.password) u.password = "***";
+    if (u.username) u.username = "***";
+    return u.toString();
+  } catch {
+    return raw.replace(/\/\/([^/@]+)@/, "//***@");
+  }
+}
+
 function toObjectId(str) {
   try {
     if (!str || typeof str !== "string" || str.length !== 24) return null;
@@ -97,7 +130,9 @@ const mongo = new MongoClient(MONGODB_URI);
 let db;
 
 async function connectDB() {
+  
   await mongo.connect();
+  
   db = mongo.db(DB_NAME);
   await db.collection("users").createIndex({ email: 1 }, { unique: true });
   await db.collection("trips").createIndex({ userId: 1 });
@@ -106,13 +141,14 @@ async function connectDB() {
   await db.collection("matches").createIndex(
     { userId: 1, requesterId: 1 }, { unique: true }
   );
+  await db.collection("rides").createIndex({ userId: 1, endDate: -1 });
   await db.collection("matches").createIndex({ requesterId: 1, state: 1 });
   await db.collection("messages").createIndex({ threadId: 1, createdAt: 1 });
   await db.collection("reviews").createIndex({ reviewedUserId: 1, createdAt: -1 });
   await db.collection("reviews").createIndex(
     { reviewedUserId: 1, reviewerId: 1 }, { unique: true }
   );
-  console.log(`[db] MongoDB → ${MONGODB_URI}/${DB_NAME}`);
+  console.log(`[db] MongoDB → ${redactMongoUri(MONGODB_URI)}/${DB_NAME}`);
 }
 
 async function getRatingSummary(reviewedUserId) {
@@ -146,9 +182,27 @@ async function getRatingSummary(reviewedUserId) {
 const MIME = {
   ".html":"text/html; charset=utf-8", ".css":"text/css; charset=utf-8",
   ".js":"application/javascript; charset=utf-8", ".json":"application/json; charset=utf-8",
-  ".png":"image/png", ".jpg":"image/jpeg", ".jpeg":"image/jpeg", ".svg":"image/svg+xml"
+  ".png":"image/png", ".jpg":"image/jpeg", ".jpeg":"image/jpeg", ".svg":"image/svg+xml",
+  ".webmanifest":"application/manifest+json; charset=utf-8",
+  ".ico":"image/x-icon", ".wav":"audio/wav", ".webm":"audio/webm"
 };
-
+// ── Buildathon: mutual crew at archive time (for ride history) ──
+async function getMutualCrew(userId) {
+  const mine = await db.collection("matches").find({ userId, state: "accept" }).toArray();
+  const realIds = mine.map(m => m.requesterId).filter(id => !id.startsWith(DEMO_PREFIX));
+  if (!realIds.length) return [];
+  const theirs = await db.collection("matches").find({
+    userId: { $in: realIds }, requesterId: userId, state: "accept"
+  }).toArray();
+  const mutualIds = new Set(theirs.map(m => m.userId));
+  const crew = [];
+  for (const id of mutualIds) {
+    const oid = toObjectId(id);
+    const u = oid ? await db.collection("users").findOne({ _id: oid }, { projection: { name: 1, avatarUrl: 1 } }) : null;
+    if (u) crew.push({ id, name: u.name, avatarUrl: u.avatarUrl || "" });
+  }
+  return crew;
+}
 // ── HTTP helpers ─────────────────────────────────────────────
 function setCORS(res, req) {
   const o      = req?.headers?.origin || "";
@@ -381,7 +435,7 @@ const handleSignup = dbRoute(async (req, res) => {
     "Content-Type": "application/json; charset=utf-8",
     "Set-Cookie":   makeAuthCookie(token)
   });
-  res.end(JSON.stringify({ ok: true, name, email, token }));
+  res.end(JSON.stringify({ ok: true, userId: result.insertedId.toString() }));
 });
 
 // Override dbRoute for signup to handle duplicate key gracefully
@@ -420,9 +474,8 @@ const handleLogin = dbRoute(async (req, res) => {
     "Content-Type": "application/json; charset=utf-8",
     "Set-Cookie":   makeAuthCookie(token)
   });
-  res.end(JSON.stringify({ ok: true, name: user.name, email: user.email, token }));
+  res.end(JSON.stringify({ ok: true, userId: user._id.toString() }));
 });
-
 function handleLogout(req, res) {
   setCORS(res, req);
   res.writeHead(200, {
@@ -430,6 +483,14 @@ function handleLogout(req, res) {
     "Set-Cookie":   clearAuthCookie()
   });
   res.end(JSON.stringify({ ok: true }));
+}
+// GET logout — navigation-safe: clears cookie + redirects. No client JS needed.
+function handleLogoutGet(req, res) {
+  res.writeHead(302, {
+    Location: "/index.html",
+    "Set-Cookie": clearAuthCookie()
+  });
+  res.end();
 }
 
 function handleMe(req, res) {
@@ -470,7 +531,7 @@ const handleUserGet = dbRoute(async (req, res, userId) => {
 
   const user = await db.collection("users").findOne(
     { _id: oid },
-    { projection: { name: 1, displayName: 1, avatarUrl: 1, bio: 1, lookingFor: 1, tripType: 1, createdAt: 1, gender: 1 } }
+    { projection: { name: 1, displayName: 1, avatarUrl: 1, bio: 1, lookingFor: 1, tripType: 1, createdAt: 1, gender: 1, bloodGroup: 1, emergencyContact: 1, medicalNotes: 1 } }
   );
 
   if (!user) return sendJson(res, 404, { error: "User not found." }, req);
@@ -621,11 +682,23 @@ const handleUserReviewPost = dbRoute(async (req, res, userId) => {
 // ════════════════════════════════════════════════════════════
 // TRIPS  (Fix #1 + #6)
 // ════════════════════════════════════════════════════════════
-
+const handleRidesGet = dbRoute(async (req, res) => {
+  const user = requireUser(req, res); if (!user) return;
+  const rides = await db.collection("rides").find({ userId: user.userId })
+    .sort({ endDate: -1 }).limit(50).toArray();
+  // Current trip already in the past = completed, not yet archived
+  const current = await db.collection("trips").findOne({ userId: user.userId });
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+if (current && current.isLive !== false && new Date(current.endDate) < today) {
+    rides.unshift({ ...current, crew: await getMutualCrew(user.userId) });
+  }
+  sendJson(res, 200, { rides }, req);
+});
 const handleTripPost = dbRoute(async (req, res) => {
+  
   const user = requireUser(req, res); if (!user) return;
   const body = await readBody(req);
-
+  
   const destination = String(body.destination || "").trim();
   if (!destination) return sendJson(res, 400, { error: "Destination is required." }, req);
 
@@ -648,7 +721,32 @@ const handleTripPost = dbRoute(async (req, res) => {
     updatedAt:  new Date(),
     isLive:     true
   };
-
+    const prev = await db.collection("trips").findOne(
+    { userId: user.userId }, { projection: { toLower: 1 } }
+  );
+    if (!prev || prev.toLower !== tripDoc.toLower) {
+    const others = await db.collection("trips")
+      .find({ isLive: true, userId: { $ne: user.userId } }).limit(200).toArray();
+    for (const t of others) {
+      if (destinationsOverlap(t.toLower, tripDoc.toLower)) {
+        push(t.userId, { type: "trip_published", from: user.userId, fromName: user.name, to: tripDoc.to });
+      }
+    }
+  }
+  // Archive the previous trip as a past ride when destination/dates change
+const oldTrip = await db.collection("trips").findOne({ userId: user.userId });
+if (oldTrip && oldTrip.isLive !== false && (oldTrip.toLower !== tripDoc.toLower ||
+    oldTrip.startDate !== tripDoc.startDate || oldTrip.endDate !== tripDoc.endDate)) {
+  await db.collection("rides").insertOne({
+    userId: user.userId,
+    from: oldTrip.from, to: oldTrip.to, toLower: oldTrip.toLower,
+    startDate: oldTrip.startDate, endDate: oldTrip.endDate,
+    tripType: oldTrip.tripType, vehicle: oldTrip.vehicle,
+    coverUrl: oldTrip.coverUrl || "",
+    crew: await getMutualCrew(user.userId),
+    archivedAt: new Date()
+  });
+}
   await db.collection("trips").updateOne(
     { userId: user.userId },
     { $set: tripDoc, $setOnInsert: { createdAt: new Date() } },
@@ -682,7 +780,14 @@ const handleMatchPost = dbRoute(async (req, res, requesterId) => {
   const user = requireUser(req, res); if (!user) return;
   const body  = await readBody(req);
   const state = String(body.action || "").trim();
-
+  if (state === "reject" && !requesterId.startsWith(DEMO_PREFIX)) {
+  const theyAccepted = await db.collection("matches").findOne({
+    userId: requesterId, requesterId: user.userId, state: "accept"
+  });
+  if (theyAccepted) {
+    push(requesterId, { type: "match_cancelled", from: user.userId, fromName: user.name, requesterId: user.userId });
+  }
+}
   if (!["accept","reject"].includes(state))
     return sendJson(res, 400, { error: "action must be 'accept' or 'reject'." }, req);
 
@@ -712,6 +817,7 @@ const handleMatchPost = dbRoute(async (req, res, requesterId) => {
 
       push(user.userId,   { type: "match_accepted", from: requesterId,   fromName: otherName,  requesterId });
       push(requesterId,   { type: "match_accepted", from: user.userId,   fromName: user.name,  requesterId: user.userId });
+      deposits.tryInit(user.userId, requesterId).catch(e => console.error("[treasurer]", e.message));
     } else {
       push(requesterId, {
         type: "match_request", from: user.userId, fromName: user.name, requesterId: user.userId
@@ -774,7 +880,7 @@ const handleMessagePost = dbRoute(async (req, res, threadId) => {
 
   const msg    = { threadId, from, fromName, text, type, meta, createdAt: new Date() };
   const result = await db.collection("messages").insertOne(msg);
-
+  deposits.applyStopRule(threadId, text).catch(() => {});
   // Push notification to the other participant (real users only)
   let notifyUserId = null;
   if (from.startsWith(BOT_PREFIX)) {
@@ -800,74 +906,13 @@ const handleMessagePost = dbRoute(async (req, res, threadId) => {
 // MATCHING  (Fix #1 + #5 destination normalization)
 // ════════════════════════════════════════════════════════════
 
-const PACE_RANK   = { relaxed: 0, moderate: 1, fast: 2 };
-const BUDGET_RANK = { budget: 0, mid: 1, comfort: 2 };
-
-function extractHabitWords(habits) {
-  const stop = new Set(["and","the","a","i","to","in","with","for","is","am","are","im","its","of","on","at"]);
-  return new Set(
-    habits.toLowerCase().replace(/[^a-z0-9\s]/g," ").split(/\s+/)
-      .filter(w => w.length > 2 && !stop.has(w))
-  );
-}
-
-function scoreCompatibility(myTrip, theirTrip) {
-  let score = 0;
-  try {
-    const ms = new Date(myTrip.startDate), me = new Date(myTrip.endDate);
-    const ts = new Date(theirTrip.startDate), te = new Date(theirTrip.endDate);
-    if (!isNaN(ms) && !isNaN(me) && !isNaN(ts) && !isNaN(te)) {
-      const overlapMs   = Math.min(me,te) - Math.max(ms,ts);
-      const overlapDays = overlapMs / 86_400_000;
-
-      if (overlapDays >= 0) {
-        // Dates overlap — score proportionally (max 30 pts)
-        score += Math.min(30, Math.round((overlapDays / Math.max(1,(me-ms)/86_400_000)) * 30));
-      } else {
-        // Dates don't overlap — give partial credit based on proximity
-        // Within 3 days gap  → 15 pts (easily adjustable, great meet-up candidates)
-        // Within 7 days gap  → 8 pts  (worth showing, can plan early/late arrival)
-        // Within 14 days gap → 3 pts  (stretch, but still show them)
-        // Beyond 14 days     → 0 pts
-        const gapDays = Math.abs(overlapDays);
-        if      (gapDays <= 3)  score += 15;
-        else if (gapDays <= 7)  score += 8;
-        else if (gapDays <= 14) score += 3;
-        // else 0 — too far apart
-      }
-    }
-  } catch {}
-  const pd = Math.abs((PACE_RANK[myTrip.pace]??1)   - (PACE_RANK[theirTrip.pace]??1));
-  score += pd===0 ? 25 : pd===1 ? 12 : 0;
-  const bd = Math.abs((BUDGET_RANK[myTrip.budget]??1) - (BUDGET_RANK[theirTrip.budget]??1));
-  score += bd===0 ? 25 : bd===1 ? 12 : 0;
-  // Habits overlap — 0-15 pts
-  // Only score if both users have filled in habits — no free bonus for empty fields
-  const myW = extractHabitWords(myTrip.habits||""), thW = extractHabitWords(theirTrip.habits||"");
-  if (myW.size > 0 && thW.size > 0) {
-    const shared = [...myW].filter(w=>thW.has(w)).length;
-    score += Math.round((shared / new Set([...myW,...thW]).size) * 15);
-  }
-
-  // lookingFor compatibility — 0-5 pts
-  // If their habits match what I'm looking for, or vice versa — bonus
-  const myLooking  = extractHabitWords(myTrip.lookingFor  || "");
-  const theirHabits= extractHabitWords(theirTrip.habits   || "");
-  const thLooking  = extractHabitWords(theirTrip.lookingFor|| "");
-  const myHabits   = extractHabitWords(myTrip.habits      || "");
-
-  let lfScore = 0;
-  if (myLooking.size > 0 && theirHabits.size > 0) {
-    const match = [...myLooking].filter(w => theirHabits.has(w)).length;
-    lfScore += Math.round((match / myLooking.size) * 3);
-  }
-  if (thLooking.size > 0 && myHabits.size > 0) {
-    const match = [...thLooking].filter(w => myHabits.has(w)).length;
-    lfScore += Math.round((match / thLooking.size) * 2);
-  }
-  score += Math.min(5, lfScore);
-
-  return Math.min(100, score);
+function readRawBody(req, maxBytes = 500_000) {
+  return new Promise((resolve, reject) => {
+    let raw = "";
+    req.on("data", c => { raw += c; if (raw.length > maxBytes) { reject(new Error("Body too large.")); req.destroy(); } });
+    req.on("end", () => resolve(raw));
+    req.on("error", reject);
+  });
 }
 
 // Fix #1 — all wrapped in dbRoute
@@ -1049,42 +1094,40 @@ const handleMutualMatches = dbRoute(async (req, res) => {
 
 function itinerarySchema() {
   return {
-    type: "object", additionalProperties: false,
+    type: "object",
     properties: {
-      title:          { type: "string" },
-      summary:        { type: "string" },
-      insiderTip:     { type: "string" },
+      title:      { type: "string" },
+      summary:    { type: "string" },
+      insiderTip: { type: "string" },
       days: {
         type: "array", minItems: 1, maxItems: 14,
         items: {
-          type: "object", additionalProperties: false,
+          type: "object",
           properties: {
-            day:            { type: "integer" },
-            title:          { type: "string" },
-            from:           { type: "string" },
-            to:             { type: "string" },
-            distance:       { type: "string" },
-            rideCondition:  { type: "string" },
-            fuelStop:       { type: "string" },
-            sleepAt:        { type: "string" },
-            sleepType:      { type: "string" },
-            hiddenGem:      { type: "string" },
-            watchOut:       { type: "string" },
-            localFood:      { type: "string" },
-            permits:        { type: "string" },
-            altRoute:       { type: "string" }
+            day:           { type: "integer" },
+            title:         { type: "string" },
+            from:          { type: "string" },
+            to:            { type: "string" },
+            distance:      { type: "string" },
+            rideCondition: { type: "string" },
+            fuelStop:      { type: "string" },
+            sleepAt:       { type: "string" },
+            sleepType:     { type: "string" },
+            hiddenGem:     { type: "string" },
+            watchOut:      { type: "string" },
+            localFood:     { type: "string" },
+            permits:       { type: "string" },
+            altRoute:      { type: "string" }
           },
-          required: [
-            "day","title","from","to","distance",
-            "rideCondition","fuelStop","sleepAt","sleepType",
-            "hiddenGem","watchOut","localFood"
-          ]
+          required: ["day","title","from","to","distance","rideCondition",
+                     "fuelStop","sleepAt","sleepType","hiddenGem","watchOut","localFood"]
         }
       }
     },
     required: ["title","summary","insiderTip","days"]
   };
 }
+
 
 const handleItinerary = dbRoute(async (req, res) => {
   const user = requireUser(req, res); if (!user) return;
@@ -1125,12 +1168,11 @@ For each day provide:
 
 Be brutally honest about difficult sections. Skip generic advice. Every field should contain something a first-timer wouldn't easily find on a travel blog. Return only valid JSON.`;
 
-  // Gemini API — generateContent endpoint with JSON response schema
-  const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_KEY}`;
-
-  const resp = await fetch(geminiUrl, {
+  const resp = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`,
+    {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", "x-goog-api-key": GEMINI_KEY },
     body: JSON.stringify({
       system_instruction: {
         parts: [{ text: "You are a travel route planner. Return only valid JSON matching the schema exactly." }]
@@ -1204,11 +1246,11 @@ Rules:
 Return only the text, no quotes, no extra formatting.`;
   }
 
-  const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_KEY}`;
-
-  const resp = await fetch(geminiUrl, {
+  const resp = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`,
+    {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", "x-goog-api-key": GEMINI_KEY },
     body: JSON.stringify({
       contents: [{ parts: [{ text: prompt }] }],
       generationConfig: { maxOutputTokens: 150, temperature: 0.8 }
@@ -1235,6 +1277,17 @@ async function handleStatic(req, res) {
   const url   = new URL(req.url, `http://${req.headers.host}`);
   const pname = url.pathname === "/" ? "/index.html" : url.pathname;
 
+  if (
+    BLOCKED_STATIC.has(pname) ||
+    pname.startsWith("/node_modules") ||
+    pname.startsWith("/eval") ||
+    pname.startsWith("/tools") ||
+    pname.startsWith("/.") ||
+    pname.endsWith(".md")
+  ) {
+    res.writeHead(404); res.end("Not found"); return;
+  }
+
   const user = getUser(req);
   if (user) {
     if (["/index.html", "/login.html", "/signup.html"].includes(pname)) {
@@ -1251,8 +1304,11 @@ async function handleStatic(req, res) {
     const file = await fs.readFile(fpath);
     const ext  = path.extname(fpath).toLowerCase();
     setCORS(res, req);
-    // Cache static assets: CSS/JS for 1 hour, HTML never (so auth redirects always apply)
-    const isAsset = [".css", ".js", ".png", ".jpg", ".jpeg", ".svg"].includes(ext);
+    if (pname === "/sw.js") {
+      res.setHeader("Service-Worker-Allowed", "/");
+    }
+    // Cache static assets: CSS/JS for 1 hour, HTML/sw.js never
+    const isAsset = [".css", ".js", ".png", ".jpg", ".jpeg", ".svg"].includes(ext) && pname !== "/sw.js";
     const cacheControl = isAsset ? "public, max-age=3600" : "no-cache, no-store, must-revalidate";
     res.writeHead(200, {
       "Content-Type":  MIME[ext] || "application/octet-stream",
@@ -1263,92 +1319,50 @@ async function handleStatic(req, res) {
     res.writeHead(404); res.end("Not found");
   }
 }
+const handleAiRank = dbRoute(async (req, res) => {
+  const user = requireUser(req, res); if (!user) return;
+  if (!rateLimit(req, res, 30, 60 * 60_000)) return;
+  const body = await readBody(req);
+  const ids  = (Array.isArray(body.candidateIds) ? body.candidateIds : []).slice(0, 5);
+  sendJson(res, 200, { verdicts: await rankWithAI(db, user.userId, ids, getRatingSummary) }, req);
+});
 
-// ════════════════════════════════════════════════════════════
-// ROUTER
-// ════════════════════════════════════════════════════════════
+const handleMockPay = dbRoute(async (req, res) => {
+  const user = requireUser(req, res); if (!user) return;
+  if (deposits.enabled()) return sendJson(res, 403, { error: "Mock pay disabled — real Razorpay keys present." }, req);
+  const body = await readBody(req);
+  const out = await deposits.mockPay(String(body.reference_id || ""), user.userId);
+  sendJson(res, out.ok ? 200 : 400, out, req);
+});
 
-function router(req, res) {
-  const { method, url } = req;
-  const urlPath = url.split("?")[0];
+const handleDepositSkip = dbRoute(async (req, res) => {
+  const user = requireUser(req, res); if (!user) return;
+  const body = await readBody(req);
+  const tid  = String(body.threadId || "");
+  if (!validateThreadOwnership(tid, user.userId)) return sendJson(res, 403, { error: "Access denied." }, req);
+  const out = await deposits.skipDeposit(tid, user.userId);
+  sendJson(res, out.ok ? 200 : 400, out, req);
+});
 
-  if (method === "OPTIONS") { setCORS(res, req); res.writeHead(204); res.end(); return; }
+const handleRazorpayWebhook = dbRoute(async (req, res) => {
+  const raw = await readRawBody(req);
+  const sig = req.headers["x-razorpay-signature"] || "";
+  const out = await deposits.webhook(raw, sig);
+  sendJson(res, out.ok ? 200 : 400, out, req);
+});
 
-  // Auth
-  if (method === "POST" && urlPath === "/api/auth/signup")  return wrappedSignup(req, res);
-  if (method === "POST" && urlPath === "/api/auth/login")   return handleLogin(req, res);
-  if (method === "POST" && urlPath === "/api/auth/logout")  return handleLogout(req, res);
-  if (method === "GET"  && urlPath === "/api/auth/me")      return handleMe(req, res);
-  if (method === "GET"  && urlPath === "/api/auth/token")   return handleAuthToken(req, res);
-
-  // Users — reviews before generic profile route
-  if (urlPath.startsWith("/api/users/") && urlPath.endsWith("/reviews")) {
-    const userId = decodeURIComponent(
-      urlPath.slice("/api/users/".length, -"/reviews".length)
-    );
-    if (method === "GET")  return handleUserReviewsGet(req, res, userId);
-    if (method === "POST") return handleUserReviewPost(req, res, userId);
-  }
-
-  if (method === "GET" && urlPath.startsWith("/api/users/")) {
-    const userId = decodeURIComponent(urlPath.slice("/api/users/".length));
-    return handleUserGet(req, res, userId);
-  }
-
-  // Profile — current user's own profile
-  if (method === "GET"  && urlPath === "/api/profile") return handleProfileGet(req, res);
-  if (method === "POST" && urlPath === "/api/profile") return handleProfileUpdate(req, res);
-
-  // Trips
-  if (method === "POST" && urlPath === "/api/trips")        return handleTripPost(req, res);
-  if (method === "GET"  && urlPath === "/api/trips/mine")   return handleTripGet(req, res);
-  if (method === "GET"  && urlPath === "/api/trips/search") return handleTripSearch(req, res);
-
-  // Matches — specific before wildcard
-  if (method === "GET"  && urlPath === "/api/matches")             return handleMatchesGet(req, res);
-  if (method === "GET"  && urlPath === "/api/matches/suggestions") return handleMatchSuggestions(req, res);
-  if (method === "GET"  && urlPath === "/api/matches/mutual")      return handleMutualMatches(req, res);
-  if (method === "POST" && urlPath.startsWith("/api/matches/")) {
-    const requesterId = decodeURIComponent(urlPath.slice("/api/matches/".length));
-    return handleMatchPost(req, res, requesterId);
-  }
-
-  // Messages
-  if (urlPath.startsWith("/api/messages/")) {
-    const threadId = decodeURIComponent(urlPath.slice("/api/messages/".length));
-    if (method === "GET")  return handleMessagesGet(req, res, threadId);
-    if (method === "POST") return handleMessagePost(req, res, threadId);
-  }
-
-  // AI
-  if (method === "POST" && urlPath === "/api/itinerary")   return handleItinerary(req, res);
-  if (method === "POST" && urlPath === "/api/ai/suggest")   return handleAiSuggest(req, res);
-
-  // Static
-  if (method === "GET" || method === "HEAD") return handleStatic(req, res);
-
-  res.writeHead(405); res.end("Method not allowed");
-}
-
-// ════════════════════════════════════════════════════════════
-// PROFILE — GET + UPDATE  (bio, lookingFor, avatarUrl)
-// ════════════════════════════════════════════════════════════
-
-// GET /api/profile — current user's full profile
 const handleProfileGet = dbRoute(async (req, res) => {
   const user = requireUser(req, res); if (!user) return;
   const doc  = await db.collection("users").findOne(
     { _id: toObjectId(user.userId) },
-    { projection: { password: 0 } }   // never return password
+    { projection: { password: 0 } }
   );
   if (!doc) return sendJson(res, 404, { error: "User not found." }, req);
   sendJson(res, 200, { profile: doc }, req);
 });
 
-// POST /api/profile — update bio, lookingFor, avatarUrl
 const handleProfileUpdate = dbRoute(async (req, res) => {
   const user = requireUser(req, res); if (!user) return;
-  // Allow up to 3MB for profile (data URI images)
   const body = await readBody(req, 3_000_000);
 
   const allowed = {};
@@ -1366,6 +1380,15 @@ const handleProfileUpdate = dbRoute(async (req, res) => {
   }
   if (typeof body.displayName === "string") allowed.displayName = body.displayName.slice(0, 60).trim();
   if (typeof body.gender      === "string" && ["unspecified", "male", "female", "other"].includes(body.gender)) allowed.gender = body.gender;
+  if (typeof body.bloodGroup  === "string") allowed.bloodGroup = body.bloodGroup.slice(0, 10).trim();
+  if (typeof body.medicalNotes=== "string") allowed.medicalNotes = body.medicalNotes.slice(0, 500).trim();
+  if (body.emergencyContact && typeof body.emergencyContact === "object") {
+    allowed.emergencyContact = {
+      name: String(body.emergencyContact.name || "").slice(0, 60).trim(),
+      phone: String(body.emergencyContact.phone || "").slice(0, 30).trim(),
+      relation: String(body.emergencyContact.relation || "").slice(0, 40).trim()
+    };
+  }
 
   if (!Object.keys(allowed).length)
     return sendJson(res, 400, { error: "No valid fields to update." }, req);
@@ -1379,6 +1402,66 @@ const handleProfileUpdate = dbRoute(async (req, res) => {
 
   sendJson(res, 200, { ok: true, updated: allowed }, req);
 });
+
+function router(req, res) {
+  const { method, url } = req;
+  const urlPath = url.split("?")[0];
+
+  if (method === "OPTIONS") { setCORS(res, req); res.writeHead(204); res.end(); return; }
+
+  if (method === "POST" && urlPath === "/api/auth/signup")  return wrappedSignup(req, res);
+  if (method === "POST" && urlPath === "/api/auth/login")   return handleLogin(req, res);
+  if (method === "POST" && urlPath === "/api/auth/logout")  return handleLogout(req, res);
+  if (method === "GET"  && urlPath === "/api/auth/logout")  return handleLogoutGet(req, res);
+  if (method === "GET"  && urlPath === "/api/auth/me")      return handleMe(req, res);
+  if (method === "GET"  && urlPath === "/api/auth/token")   return handleAuthToken(req, res);
+
+  if (urlPath.startsWith("/api/users/") && urlPath.endsWith("/reviews")) {
+    const userId = decodeURIComponent(
+      urlPath.slice("/api/users/".length, -"/reviews".length)
+    );
+    if (method === "GET")  return handleUserReviewsGet(req, res, userId);
+    if (method === "POST") return handleUserReviewPost(req, res, userId);
+  }
+
+  if (method === "GET" && urlPath.startsWith("/api/users/")) {
+    const userId = decodeURIComponent(urlPath.slice("/api/users/".length));
+    return handleUserGet(req, res, userId);
+  }
+
+  if (method === "GET"  && urlPath === "/api/profile") return handleProfileGet(req, res);
+  if (method === "POST" && urlPath === "/api/profile") return handleProfileUpdate(req, res);
+
+  if (method === "POST" && urlPath === "/api/trips")        return handleTripPost(req, res);
+  if (method === "GET"  && urlPath === "/api/trips/mine")   return handleTripGet(req, res);
+  if (method === "GET"  && urlPath === "/api/rides")        return handleRidesGet(req, res);
+  if (method === "GET"  && urlPath === "/api/trips/search") return handleTripSearch(req, res);
+
+  if (method === "GET"  && urlPath === "/api/matches")             return handleMatchesGet(req, res);
+  if (method === "GET"  && urlPath === "/api/matches/suggestions") return handleMatchSuggestions(req, res);
+  if (method === "GET"  && urlPath === "/api/matches/mutual")      return handleMutualMatches(req, res);
+  if (method === "POST" && urlPath === "/api/matches/ai-rank")     return handleAiRank(req, res);
+  if (method === "POST" && urlPath.startsWith("/api/matches/")) {
+    const requesterId = decodeURIComponent(urlPath.slice("/api/matches/".length));
+    return handleMatchPost(req, res, requesterId);
+  }
+
+  if (urlPath.startsWith("/api/messages/")) {
+    const threadId = decodeURIComponent(urlPath.slice("/api/messages/".length));
+    if (method === "GET")  return handleMessagesGet(req, res, threadId);
+    if (method === "POST") return handleMessagePost(req, res, threadId);
+  }
+
+  if (method === "POST" && urlPath === "/api/itinerary")           return handleItinerary(req, res);
+  if (method === "POST" && urlPath === "/api/ai/suggest")          return handleAiSuggest(req, res);
+  if (method === "POST" && urlPath === "/api/deposits/skip")       return handleDepositSkip(req, res);
+  if (method === "POST" && urlPath === "/api/mock/pay")            return handleMockPay(req, res);
+  if (method === "POST" && urlPath === "/api/razorpay/webhook")    return handleRazorpayWebhook(req, res);
+
+  if (method === "GET" || method === "HEAD") return handleStatic(req, res);
+
+  res.writeHead(405); res.end("Method not allowed");
+}
 
 // ════════════════════════════════════════════════════════════
 // BOOT
@@ -1401,13 +1484,16 @@ async function main() {
     console.error("[db] MongoDB connection failed:", e.message);
     process.exit(1);
   }
+  deposits.bind(db, push);
+  setInterval(() => deposits.tick().catch(e => console.error("[treasurer]", e.message)), 10 * 60_000);
   const server = http.createServer(router);
+
   setupWebSocket(server);
   server.listen(PORT, () => {
     console.log(`\nRoamCircle → http://localhost:${PORT}`);
     console.log(`WebSocket  → ws://localhost:${PORT}/ws`);
-    console.log(`MongoDB:     ${MONGODB_URI}`);
-    console.log(`JWT:         ${JWT_SECRET === "roamcircle-dev-secret-change-in-prod" ? "⚠️  default" : "✓ custom"}`);
+    console.log(`MongoDB:     ${redactMongoUri(MONGODB_URI)}`);
+    console.log(`JWT:         ✓ custom`);
     console.log(`Gemini:      ${GEMINI_KEY ? "✓ key found" : "⚠️  not set (AI planner disabled)"}`);
     console.log(`CORS:        ${[...ALLOWED_ORIGINS].join(", ")}\n`);
   });

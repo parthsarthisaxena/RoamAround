@@ -107,8 +107,6 @@
           return;
         }
 
-        // Store token for WebSocket auth, then redirect
-        if (data.token) sessionStorage.setItem("rc_ws_token", data.token);
         window.location.href = "/dashboard.html";
       } catch {
         errEl.textContent = "Network error — is the server running?";

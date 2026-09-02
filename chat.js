@@ -28,6 +28,10 @@ const T = {
     rating:     "4.7",
     longRides:  "6",
     score:      88,
+    bloodGroup: "O+",
+    iceName:    "Ramesh Mehta (Brother)",
+    icePhone:   "+91 98230 45678",
+    medicalNotes: "No known allergies. Certified in wilderness first-aid.",
     habits:     "🌅 Early starter, 🛠️ Carries toolkit, 🏕️ Camping OK, 🍛 Dhaba lover, 🚭 Non-smoker",
     bio:        "Hey fellow riders! I'm Arjun, a rider based in Pune. I've been riding long distance for about 6 years now. Completed Spiti Valley circuit twice, Kerala coastal route, and Ladakh once. Cruiser at heart, usually cruising comfortably at 85-95 km/h. Early starts (usually 5am!) are my standard to beat highway traffic and reach the first night stop before dark. I carry a full toolkit and spare parts, happy to help with minor mechanical issues.",
     lookingFor: "Moderate-paced, safe, and reliable riders who respect road rules. Comfortable with basic guesthouses/wild camping, and don't mind starting early mornings.",
@@ -62,6 +66,10 @@ const T = {
     rating:     "4.5",
     longRides:  "4",
     score:      82,
+    bloodGroup: "A+",
+    iceName:    "Sunita Nair (Mother)",
+    icePhone:   "+91 98450 12345",
+    medicalNotes: "Mild asthma (inhaler kept in tank bag). Carries trauma first-aid kit.",
     habits:     "📸 Photographer, 🏕️ Camping, 🌿 Solo rider, 🔧 Basic mechanic, 🚭 Non-smoker",
     bio:        "Hey there! I'm Priya, a solo rider and travel photographer starting from Nashik on my Royal Enfield Classic 350. Completed the Spiti circuit solo last year. I love slow travel, stopping frequently to take photographs, capture landscape shots, and explore off-beat scenic spots. Safety-conscious rider, relaxed pace, cruising at 70-80 km/h. Comfortable with basic setups, wild camping, and carried a first-aid kit.",
     lookingFor: "Patience with frequent photography stops, similar relaxed riding pace, safe riding habits, and comfortable with camping in mountain environments.",
@@ -96,6 +104,10 @@ const T = {
     rating:     "4.8",
     longRides:  "11",
     score:      74,
+    bloodGroup: "B+",
+    iceName:    "Vikram Das (Father)",
+    icePhone:   "+91 98110 98765",
+    medicalNotes: "Allergic to Penicillin. Carries Garmin inReach satellite beacon.",
     habits:     "⚡ Fast rider, 🏨 Guesthouses, 🛠️ Expert mechanic, 📡 Satellite phone",
     bio:        "Yo! I'm Rohan, a fast-paced adventurer starting from Delhi on my KTM Adventure 390. Highly experienced with 11 long rides under my belt, including Leh-Srinagar twice, Spiti, and northeastern routes. Fast cruising style (100-110 km/h), usually targeting 350-450 km per day. Expert mechanic — happy to perform quick checkups on the group bikes. I carry a satellite phone for emergency safety.",
     lookingFor: "Highly self-reliant, fast-paced riders with mountain experience. Must know basic bike maintenance. Comfortable with guesthouses or hostels.",
@@ -205,6 +217,13 @@ async function threadId(requesterId) {
 
 // ── Time helpers ──────────────────────────────────────────────
 function fmtTime(iso) { return new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }); }
+function fmtTripDates(dt) {
+  // "2026-08-21 – 2026-09-20" → "Aug 21 – Sep 20"
+  return String(dt || "").replace(/(\d{4})-(\d{2})-(\d{2})/g, (m, y, mo, d) => {
+    const n = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    return n[Number(mo) - 1] + " " + Number(d);
+  });
+}
 function fmtDate(iso) {
   const d = new Date(iso), t = new Date();
   const y = new Date(t); y.setDate(t.getDate() - 1);
@@ -218,7 +237,32 @@ function esc(s) {
     .replace(/>/g, "&gt;").replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
 }
-
+// ── Buildathon: typewriter for AI reasoning ──
+function typeInto(el, text, speed = 12) {
+  if (!el) return;
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) { el.textContent = text; return; }
+  let i = 0; el.textContent = "";
+  const t = setInterval(() => {
+    el.textContent = text.slice(0, ++i);
+    if (i >= text.length) clearInterval(t);
+  }, speed);
+}
+// ── Buildathon: confetti burst ──
+function celebrate(x, y) {
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const colors = ["#1a9e4a", "#38bdf8", "#f59e0b", "#a78bfa"];
+  for (let i = 0; i < 24; i++) {
+    const p = document.createElement("div");
+    p.className = "confetti";
+    p.style.background = colors[i % 4];
+    p.style.left = x + "px"; p.style.top = y + "px";
+    const a = Math.random() * Math.PI * 2, v = 60 + Math.random() * 90;
+    p.style.setProperty("--dx", Math.cos(a) * v + "px");
+    p.style.setProperty("--dy", Math.sin(a) * v + "px");
+    document.body.appendChild(p);
+    setTimeout(() => p.remove(), 950);
+  }
+}
 // ── Match state helpers ───────────────────────────────────────
 window.rcMutualMatches = new Set();
 async function loadMutualMatches() {
@@ -233,7 +277,19 @@ async function loadMatchStates() {
   if (ok) { cacheSet("rc_matches", data.matches); return data.matches; }
   return cacheGet("rc_matches") || {};
 }
-
+// ── Exit rules — cancel a request or leave a mutual crew ──
+async function cancelMatch(id, isMutual) {
+  const name = realUserCache[id]?.userName || getDemoData(id)?.name || "this rider";
+  const ok = confirm(isMutual
+    ? `Leave the crew with ${name}? They'll be notified.`
+    : `Cancel your request to ${name}?`);
+  if (!ok) return;
+  await saveMatchState(id, "reject");
+  const updated = cacheGet("rc_matches") || {};
+  syncNav(updated);
+  rebuildMatchesGrid(updated);
+  if (active === id) closeChat();
+}
 async function saveMatchState(requesterId, action) {
   const cached = cacheGet("rc_matches") || {};
   cached[requesterId] = action;
@@ -289,7 +345,13 @@ function renderMsgs(msgs, requesterId, isLoadMore = false) {
   if (!box) return;
 
   if (!msgs || !msgs.length) {
-    box.innerHTML = `<div class="chat-empty"><div class="chat-empty-icon">💬</div><p>No messages yet — say hi!</p></div>`;
+    const isDemo = requesterId ? isDemoId(requesterId) : false;
+    const name = requesterId ? (getDemoData(requesterId)?.name || realUserCache[requesterId]?.userName || "your match") : "your match";
+    box.innerHTML = `
+      <div class="chat-empty">
+        <div class="chat-empty-icon">👋</div>
+        <p>You matched with ${esc(name)}!<br>Send the first message.</p>
+      </div>`;
     typ?.classList.remove("visible");
     return;
   }
@@ -313,6 +375,155 @@ function renderMsgs(msgs, requesterId, isLoadMore = false) {
             <div class="route-share-label">🏍️ Shared route</div>
             <div class="route-share-title">${esc(m.meta?.title || "Route")}</div>
             <div class="route-share-sub">${esc(m.meta?.sub || "")}</div>
+          </div>
+          <div class="chat-ts">${fmtTime(ts)}</div>
+        </div>`;
+        } else if (m.type === "deposit") {
+      html += `<div class="chat-msg theirs"><div class="chat-bubble route-share">
+        <div class="route-share-label">💳 Trip deposit · ₹${esc(m.meta?.amount || "")}</div>
+        <div class="route-share-title">${esc(m.meta?.title || "Good-faith deposit")}</div>
+        <div class="route-share-sub">${esc(m.meta?.sub || "")}</div>
+        ${m.meta?.link ? `<a class="deposit-pay-btn" href="${esc(m.meta.link)}" target="_blank" rel="noopener">${m.meta?.status === "paid" ? "View receipt" : "Secure my spot"}</a>` : ""}
+      </div><div class="chat-ts">${fmtTime(ts)}</div></div>`;
+    } else if (m.type === "expense") {
+      const isMine = m.from === myUserId;
+      const side = isMine ? "mine" : "theirs";
+      const catIcon = m.meta?.icon || "⛽";
+      const catLabel = m.meta?.categoryLabel || "Expense";
+      const amount = Number(m.meta?.amount) || 0;
+      const splitAmount = Number(m.meta?.splitAmount) || Math.round(amount / 2);
+      const desc = m.meta?.desc || "Shared Road Expense";
+      const isSettled = m.meta?.status === "settled";
+      const paidByLabel = isMine ? "You paid upfront" : (getDemoData(requesterId)?.name || "Rider") + " paid upfront";
+
+      html += `
+        <div class="chat-msg ${side}">
+          <div class="chat-bubble route-share is-expense">
+            <div class="exp-card-header">
+              <span class="exp-card-tag">${catIcon} ${esc(catLabel)}</span>
+              <span class="exp-card-status-badge ${isSettled ? "settled" : ""}">${isSettled ? "✓ Settled" : "⏳ Pending"}</span>
+            </div>
+            <div class="exp-card-body">
+              <div class="exp-card-desc">${esc(desc)}</div>
+              <div class="exp-card-amount-row">
+                <div class="exp-card-total">₹${amount.toLocaleString("en-IN")}</div>
+                <div class="exp-card-split">Your share: <strong>₹${splitAmount.toLocaleString("en-IN")}</strong></div>
+              </div>
+            </div>
+            <div class="exp-card-footer">
+              <span>${esc(paidByLabel)}</span>
+              ${!isSettled ? `<button class="exp-settle-btn" data-exp-time="${esc(ts)}" type="button">Mark as Settled</button>` : `<span style="color:#1DB954;font-weight:700">All Paid</span>`}
+            </div>
+          </div>
+          <div class="chat-ts">${fmtTime(ts)}</div>
+        </div>`;
+    } else if (m.type === "location") {
+      const isMine = m.from === myUserId;
+      const side = isMine ? "mine" : "theirs";
+      const lat = Number(m.meta?.lat) || 0;
+      const lng = Number(m.meta?.lng) || 0;
+      const note = m.meta?.note || "Live Convoy Check-In";
+      const label = m.meta?.label || "Live GPS Location";
+      const mapUrl = m.meta?.mapUrl || `https://www.google.com/maps?q=${lat},${lng}`;
+      const accuracy = m.meta?.accuracy ? `±${m.meta.accuracy}m` : "High Accuracy";
+
+      html += `
+        <div class="chat-msg ${side}">
+          <div class="chat-bubble route-share is-location">
+            <div class="loc-card-header">
+              <span class="loc-card-tag">📍 ${esc(label)}</span>
+              <span style="font-size:0.68rem;color:var(--text-muted)">${esc(accuracy)}</span>
+            </div>
+            <div class="loc-card-coords">${lat.toFixed(4)}° N, ${lng.toFixed(4)}° E</div>
+            <div class="loc-card-note">${esc(note)}</div>
+            <div class="loc-card-actions">
+              <a href="${esc(mapUrl)}" target="_blank" rel="noopener" class="loc-action-btn">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+                Open in Google Maps
+              </a>
+            </div>
+          </div>
+          <div class="chat-ts">${fmtTime(ts)}</div>
+        </div>`;
+    } else if (m.type === "sos") {
+      const isMine = m.from === myUserId;
+      const side = isMine ? "mine" : "theirs";
+      const reason = m.meta?.reason || "Emergency Convoy Assistance Requested";
+      const bloodGroup = m.meta?.bloodGroup || "O+";
+      const icePhone = m.meta?.icePhone || "112";
+      const iceName = m.meta?.iceName || "Emergency Contact";
+      const lat = Number(m.meta?.lat) || 0;
+      const lng = Number(m.meta?.lng) || 0;
+      const mapUrl = m.meta?.mapUrl || `https://www.google.com/maps?q=${lat},${lng}`;
+
+      html += `
+        <div class="chat-msg ${side}">
+          <div class="chat-bubble route-share is-sos">
+            <div class="sos-card-header">
+              <span class="sos-card-tag"><span class="safety-dot-pulse"></span> EMERGENCY RIDER SOS</span>
+              <span class="sos-meta-badge">🩸 ${esc(bloodGroup)}</span>
+            </div>
+            <div class="sos-card-reason">${esc(reason)}</div>
+            <div class="sos-card-meta-row">
+              <span>📍 ${lat.toFixed(4)}° N, ${lng.toFixed(4)}° E</span>
+              <span>• ICE: ${esc(iceName)}</span>
+            </div>
+            <div class="sos-card-actions">
+              <a href="${esc(mapUrl)}" target="_blank" rel="noopener" class="sos-action-btn">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+                Locate on Map
+              </a>
+              <a href="tel:${esc(icePhone.replace(/\s+/g, ""))}" class="sos-action-btn" style="background:#1DB954">
+                📞 Call ICE (${esc(icePhone)})
+              </a>
+            </div>
+          </div>
+          <div class="chat-ts">${fmtTime(ts)}</div>
+        </div>`;
+    } else if (m.type === "voice" || m.type === "audio") {
+      const isMine = m.from === myUserId;
+      const side = isMine ? "mine" : "theirs";
+      const audioUrl = m.meta?.audioUrl || "";
+      const durSec = m.meta?.durationSeconds || 5;
+      const durLabel = window.RC_media?.formatAudioTime(durSec) || `0:${durSec < 10 ? '0' : ''}${durSec}`;
+      const msgId = m.createdAt || String(Math.random());
+
+      html += `
+        <div class="chat-msg ${side}">
+          <div class="chat-bubble is-voice">
+            <div class="voice-player-row">
+              <button class="voice-play-btn" data-audio-url="${esc(audioUrl)}" data-msg-id="${esc(msgId)}" data-duration="${durSec}" type="button" title="Play voice note">
+                <span class="voice-play-icon">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                </span>
+              </button>
+              <div class="voice-track-wrap">
+                <div class="voice-waveform-bar">
+                  <div class="voice-progress-fill"></div>
+                </div>
+                <div class="voice-time-row">
+                  <span class="voice-time-curr">0:00</span>
+                  <span class="voice-time-total">🎙️ ${esc(durLabel)}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="chat-ts">${fmtTime(ts)}</div>
+        </div>`;
+    } else if (m.type === "photo" || m.type === "image") {
+      const isMine = m.from === myUserId;
+      const side = isMine ? "mine" : "theirs";
+      const photoUrl = m.meta?.photoUrl || m.text || "";
+      const caption = m.meta?.caption || (m.text && m.text !== photoUrl ? m.text : "");
+
+      html += `
+        <div class="chat-msg ${side}">
+          <div class="chat-bubble is-photo">
+            <div class="chat-photo-card" title="Click to view full size">
+              <img src="${esc(photoUrl)}" alt="${esc(caption || 'Road Photo')}" loading="lazy">
+              ${caption ? `<div class="chat-photo-overlay"><span class="chat-photo-caption">${esc(caption)}</span></div>` : ""}
+              <span class="chat-photo-zoom-hint">🔍 Expand</span>
+            </div>
           </div>
           <div class="chat-ts">${fmtTime(ts)}</div>
         </div>`;
@@ -340,6 +551,9 @@ function renderMsgs(msgs, requesterId, isLoadMore = false) {
   box.innerHTML = html;
   if (typ) box.appendChild(typ);
 
+  // Update thread balance ticker
+  updateBalanceBar(requesterId, msgs);
+
   if (hasMore) {
     const btn = document.getElementById("chat-load-more-btn");
     if (btn) {
@@ -360,6 +574,61 @@ function renderMsgs(msgs, requesterId, isLoadMore = false) {
     scrollBottom(false);
   }
 }
+
+function updateBalanceBar(requesterId, msgs) {
+  const bar = document.getElementById("chat-balance-bar");
+  const textEl = document.getElementById("chat-balance-text");
+  const pill = document.getElementById("chat-balance-pill");
+  if (!bar || !textEl || !pill) return;
+
+  if (!window.RC_expenses) {
+    bar.style.display = "none";
+    return;
+  }
+
+  const bal = window.RC_expenses.calculateThreadBalances(msgs, myUserId);
+  if (bal.totalSpent === 0) {
+    bar.style.display = "none";
+    return;
+  }
+
+  bar.style.display = "flex";
+  pill.className = "chat-balance-pill";
+
+  if (bal.netBalance > 0) {
+    pill.classList.add("owed");
+    textEl.textContent = `You are owed ₹${bal.netBalance.toLocaleString("en-IN")}`;
+  } else if (bal.netBalance < 0) {
+    pill.classList.add("owe");
+    textEl.textContent = `You owe ₹${Math.abs(bal.netBalance).toLocaleString("en-IN")}`;
+  } else {
+    textEl.textContent = "All trip expenses settled ✓";
+  }
+}
+
+window.RC_sendExpense = async (requesterId, expenseData) => {
+  await sendMsg(requesterId, `Shared expense: ${expenseData.desc} (₹${expenseData.amount})`, "expense", expenseData);
+};
+
+window.RC_sendLocationCheckin = async (requesterId, locationData) => {
+  await sendMsg(requesterId, `📍 Shared location: ${locationData.label}`, "location", locationData);
+};
+
+window.RC_sendSOSAlert = async (requesterId, sosData) => {
+  if (requesterId) {
+    await sendMsg(requesterId, `🚨 EMERGENCY SOS: ${sosData.reason}`, "sos", sosData);
+  } else {
+    const mutuals = Array.from(window.rcMutualMatches || []);
+    if (mutuals.length === 0) {
+      const target = active || "demo_arjun";
+      await sendMsg(target, `🚨 EMERGENCY SOS: ${sosData.reason}`, "sos", sosData);
+    } else {
+      for (const mId of mutuals) {
+        await sendMsg(mId, `🚨 EMERGENCY SOS: ${sosData.reason}`, "sos", sosData);
+      }
+    }
+  }
+};
 
 function showChatLoading() {
   const box = document.getElementById("chat-messages");
@@ -411,8 +680,49 @@ function scheduleReply(requesterId, tid) {
 
   replyTimers[requesterId] = setTimeout(async () => {
     const currentMsgs = await loadMessages(tid);
-    const idx         = getBotReplyIndex(currentMsgs, requesterId);
-    const text        = tv.replies[idx % tv.replies.length];
+    const lastMsg = currentMsgs[currentMsgs.length - 1];
+    let text;
+
+    if (lastMsg && lastMsg.type === "expense") {
+      const amt = lastMsg.meta?.splitAmount || Math.round((lastMsg.meta?.amount || 0) / 2);
+      const ackReplies = [
+        `Got it! I'll UPI/settle my share of ₹${amt} at the next stop 👍`,
+        `Noted! Adding ₹${amt} to my ledger, will clear it today ⛽`,
+        `Perfect, thanks for covering it upfront! Split settled soon 🤝`
+      ];
+      text = ackReplies[Math.floor(Math.random() * ackReplies.length)];
+    } else if (lastMsg && lastMsg.type === "sos") {
+      const sosReplies = [
+        `🚨 SOS RECEIVED! Heading to your GPS coordinates now. Keep calm, I have toolkit and first-aid with me!`,
+        `🚨 Alert acknowledged! Notifying the rest of the convoy and contacting highway assistance 1033. Hang tight!`,
+        `🚨 Got your beacon! I'm about 8 km behind you, pulling up to your location right away.`
+      ];
+      text = sosReplies[Math.floor(Math.random() * sosReplies.length)];
+    } else if (lastMsg && lastMsg.type === "location") {
+      const locReplies = [
+        `📍 Checkpoint noted! We are tracking on schedule 👍`,
+        `Got your GPS fix! Linking up at the next dhaba/fuel stop in 25 mins.`,
+        `Great pace! Pin saved on my route map 🏍️`
+      ];
+      text = locReplies[Math.floor(Math.random() * locReplies.length)];
+    } else if (lastMsg && (lastMsg.type === "voice" || lastMsg.type === "audio")) {
+      const voiceReplies = [
+        `Heard your voice note! Stopping for a quick chai & fuel check at the next turn ☕`,
+        `Loud and clear! Road ahead is smooth, keeping our convoy formation 🏍️`,
+        `Got it! Let's regroup at the next landmark in about 15 mins 👍`
+      ];
+      text = voiceReplies[Math.floor(Math.random() * voiceReplies.length)];
+    } else if (lastMsg && (lastMsg.type === "photo" || lastMsg.type === "image")) {
+      const photoReplies = [
+        `Stunning shot! Adding this viewpoint to our route album 📸`,
+        `That stretch of mountain tarmac looks incredible! Riding through right now 🏔️`,
+        `Great capture! The road conditions look fantastic ahead 👍`
+      ];
+      text = photoReplies[Math.floor(Math.random() * photoReplies.length)];
+    } else {
+      const idx = getBotReplyIndex(currentMsgs, requesterId);
+      text = tv.replies[idx % tv.replies.length];
+    }
 
     await postMessage(tid, {
       text, type: "text", meta: {},
@@ -423,12 +733,19 @@ function scheduleReply(requesterId, tid) {
     delete replyTimers[requesterId];
     const updatedMsgs = await loadMessages(tid);
 
-    if (requesterId === active) {
+    if (requesterId === active && document.getElementById("chat-panel")?.classList.contains("open")) {
       typ?.classList.remove("visible");
       renderMsgs(updatedMsgs, requesterId);
       scrollBottom();
     } else {
       document.querySelector(`.chat-tab[data-thread="${requesterId}"]`)?.classList.add("has-unread");
+      window.RC_notify?.({
+        icon: "💬",
+        title: `Message from ${tv.name}`,
+        body: text,
+        ts: Date.now(),
+        action: () => openChat(requesterId)
+      });
     }
   }, delay);
 }
@@ -456,6 +773,7 @@ async function openChat(requesterId) {
   }
 
   active = requesterId;
+  window._rcActiveRequesterId = requesterId;
 
   const isDemo = isDemoId(requesterId);
   const tv     = isDemo ? getDemoData(requesterId) : null;
@@ -551,6 +869,7 @@ function closeChat() {
   document.getElementById("typing-indicator")?.classList.remove("visible");
   document.body.style.overflow = "";
   active = null;
+  window._rcActiveRequesterId = null;
   window._rcActiveThread = null;
 }
 
@@ -687,42 +1006,49 @@ function rebuildMatchesGrid(states) {
 
     const card = document.createElement("div");
     card.className = "match-profile-card";
-    card.innerHTML = `
-      <div class="mpc-cover" style="${coverStyle};position:relative">
-        <div class="mpc-cover-fade"></div>
-      </div>
-      <div class="mpc-body">
-        <div class="mpc-face-wrap">
-          ${face
-            ? `<img class="mpc-face" src="${esc(face)}" alt="${esc(name)}"
-                    onerror="this.style.display='none';this.nextElementSibling.style.display='grid'">
-               <div class="mpc-face-fallback">${init}</div>`
-            : `<div class="mpc-face-fallback" style="display:grid">${init}</div>`
-          }
-        </div>
-        <div class="mpc-name">${esc(name)}</div>
-        <div class="mpc-rating-slot" data-rating-user="${esc(id)}"></div>
-        <div class="mpc-route">
-          <span class="from-pill">${esc(from)}</span>
-          <svg width="22" height="8" viewBox="0 0 22 8">
-            <path d="M0 4h16M12 1l4 3-4 3" stroke="#1DB954" stroke-width="1.5"
-                  fill="none" stroke-linecap="round"/>
-          </svg>
-          <span class="to-pill">${esc(to)}</span>
-        </div>
-        <div class="mpc-vehicle">${emoji} ${esc(veh)} · ${esc(dt)}</div>
-        ${!isMutual
-          ? `<div class="mpc-pending-badge">⏳ Waiting for their accept</div>`
-          : `<div class="mpc-mutual-badge">🎉 Mutual Match</div>`}
-        <button class="mpc-chat-btn" data-open-chat="${id}" ${!isMutual ? "disabled class='mpc-chat-btn is-disabled'" : ""}>
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M20 2H4a2 2 0 0 0-2 2v18l4-4h14a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2z"/>
-          </svg>
-          ${isMutual ? "Open chat" : "Waiting to accept"}
-        </button>
-      </div>`;
+card.innerHTML = `
+  <div class="mpc-cover" style="${coverStyle};position:relative">
+    <div class="mpc-cover-fade"></div>
+  </div>
+  <div class="mpc-body">
+    <div class="mpc-face-wrap">
+      ${face
+        ? `<img class="mpc-face" src="${esc(face)}" alt="${esc(name)}"
+                onerror="this.style.display='none';this.nextElementSibling.style.display='grid'">
+           <div class="mpc-face-fallback">${init}</div>`
+        : `<div class="mpc-face-fallback" style="display:grid">${init}</div>`
+      }
+    </div>
+    <div class="mpc-name">${esc(name)}</div>
+    <div class="mpc-rating-slot" data-rating-user="${esc(id)}"></div>
+    <div class="mpc-route">
+      <span class="from-pill">${esc(from)}</span>
+      <svg width="22" height="8" viewBox="0 0 22 8">
+        <path d="M0 4h16M12 1l4 3-4 3" stroke="#1DB954" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+      </svg>
+      <span class="to-pill">${esc(to)}</span>
+    </div>
+    <div class="mpc-vehicle">${emoji} ${esc(veh)} · ${esc(fmtTripDates(dt))}</div>
+    ${!isMutual
+      ? `<div class="mpc-pending-badge">⏳ Waiting for their accept</div>`
+      : `<div class="mpc-mutual-badge">🎉 Mutual Match</div>`}
+    <button class="mpc-chat-btn${isMutual ? "" : " is-disabled"}" data-open-chat="${id}" ${isMutual ? "" : "disabled"}>
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M20 2H4a2 2 0 0 0-2 2v18l4-4h14a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2z"/>
+      </svg>
+      ${isMutual ? "Open chat" : "Waiting to accept"}
+    </button>
+    <button class="mpc-leave-btn" data-leave-crew="${id}">${isMutual ? "Leave crew" : "Cancel request"}</button>
+  </div>`;
     card.querySelector(".mpc-chat-btn").addEventListener("click", () => {
       if (isMutual) openChat(id);
+    });
+    card.querySelector("[data-leave-crew]")?.addEventListener("click", e => {
+  e.stopPropagation();
+  cancelMatch(id, isMutual);
+});
+    card.querySelector("[data-cancel-request]")?.addEventListener("click", e => {
+      e.stopPropagation(); cancelMatch(id, false);
     });
     card.addEventListener("click", e => {
       if (e.target.closest("button, a")) return;
@@ -823,20 +1149,24 @@ function applyRealRejected(card, states) {
 }
 
 // ── Real suggestions — Fix #8: refresh states before render ───
+const list = document.getElementById("request-list");
+const sk = document.createElement("div");
+sk.innerHTML = '<div class="skeleton skeleton-card"></div>'.repeat(2);
+list?.prepend(sk);
 async function loadAndRenderSuggestions() {
   const { ok, data } = await apiGet("/api/matches/suggestions");
-  if (!ok) return;
-
-  if (data.reason) {
-    const list = document.getElementById("request-list");
-    if (list && !list.querySelector(".no-trip-notice")) {
-      const notice = document.createElement("div");
-      notice.className = "no-trip-notice";
-      notice.innerHTML = `⚠️ ${data.reason} Real rider suggestions will appear here once your trip is live.`;
-      list.insertBefore(notice, list.firstChild);
-    }
-    return;
+  sk.remove();
+if (!ok) {
+  const list = document.getElementById("request-list");
+  if (list && !list.querySelector(".retry-notice")) {
+    const n = document.createElement("div");
+    n.className = "no-trip-notice retry-notice";
+    n.innerHTML = `⚠️ Couldn't load rider suggestions. <button class="button compact" id="retry-suggestions" style="margin-left:auto">Retry</button>`;
+    list.insertBefore(n, list.firstChild);
+    n.querySelector("#retry-suggestions").addEventListener("click", () => { n.remove(); loadAndRenderSuggestions(); });
   }
+  return;
+}
 
   const suggestions = data.suggestions || [];
   if (!suggestions.length) return;
@@ -873,9 +1203,21 @@ async function loadAndRenderSuggestions() {
     };
     renderRealCard(s, matchStates[s.userId]);
   });
-
+    // ── Buildathon: async AI vibe check (progressive enhancement, never blocks render) ──
+  if (suggestions.length) {
+    apiPost("/api/matches/ai-rank", { candidateIds: suggestions.slice(0, 5).map(s => s.userId) })
+      .then(({ ok, data }) => {
+        (data?.verdicts || []).forEach(v => {
+          const anchor = document.querySelector(`[data-request-card="${v.userId}"] .rrc-meta`);
+          if (!anchor) return;
+          anchor.insertAdjacentHTML("afterend",
+            `<div class="rrc-ai-line">🤖 <span>${esc(v.reasoning)}</span>${v.tier === "fallback" ? "<em>· deterministic fallback</em>" : ""}</div>`);
+        });
+      });
+  }
   syncNav(matchStates);
   rebuildMatchesGrid(matchStates);
+  window.RC_initPendingNotifications?.();
 }
 
 // Cache my trip dates so dateProximityLabel doesn't depend on DOM timing
@@ -1002,10 +1344,18 @@ function renderRealCard(s, existingState) {
     const btn = e.target.closest("[data-request-action]");
     if (btn) {
       const action = btn.dataset.requestAction;
+      window.RC_dismissNotification?.(s.userId);
       await saveMatchState(s.userId, action);
       const updated = cacheGet("rc_matches") || {};
       if (action === "accept") {
         applyRealAccepted(card, s.userId, updated);
+        window.RC_notify?.({
+          icon: "🎉",
+          title: "Mutual Match!",
+          body: `You matched with ${s.userName || "a rider"}! Tap to open chat.`,
+          ts: Date.now(),
+          action: () => openChat(s.userId)
+        });
         if (canChatWith(s.userId)) openChat(s.userId);
       } else applyRealRejected(card, updated);
     } else if (!e.target.closest("button, a")) {
@@ -1069,9 +1419,21 @@ async function wireCards() {
       const btn = e.target.closest("[data-request-action]");
       if (btn) {
         const action = btn.dataset.requestAction;
+        window.RC_dismissNotification?.(id);
         await saveMatchState(id, action);
         const updated = cacheGet("rc_matches") || {};
-        if (action === "accept") { applyAccepted(card, id, updated); openChat(id); }
+        if (action === "accept") {
+          applyAccepted(card, id, updated);
+          const name = card.dataset.travelerName || getDemoData(id)?.name || "Rider";
+          window.RC_notify?.({
+            icon: "🎉",
+            title: "Mutual Match!",
+            body: `You matched with ${name}! Tap to open chat.`,
+            ts: Date.now(),
+            action: () => openChat(id)
+          });
+          openChat(id);
+        }
         else applyRejected(card, updated);
       } else if (!e.target.closest("button, a")) {
         openTravelerDrawer(id);
@@ -1095,12 +1457,47 @@ function wireInput() {
     input.style.height = Math.min(input.scrollHeight, 110) + "px";
     sendBtn.disabled = !input.value.trim();
   });
-
+  document.getElementById("chat-messages")?.addEventListener("click", async e => {
+  const btn = e.target.closest("[data-skip-deposit]");
+  if (!btn || !active) return;
+  const tid = await threadId(active);
+  if (!tid) return;
+  const { ok } = await apiPost("/api/deposits/skip", { threadId: tid });
+  if (ok) btn.outerHTML = `<span class="deposit-skipped-note">Skipped ✓ — no problem, ride on!</span>`;
+});
   input.addEventListener("keydown", e => {
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); doSend(); }
   });
 
   sendBtn.addEventListener("click", doSend);
+
+  // Expense split buttons
+  const splitBtn = document.getElementById("chat-split-expense");
+  const quickSplitBtn = document.getElementById("chat-quick-split-btn");
+  splitBtn?.addEventListener("click", () => {
+    if (active) window.RC_expenses?.openExpenseModal(active);
+  });
+  quickSplitBtn?.addEventListener("click", () => {
+    if (active) window.RC_expenses?.openExpenseModal(active);
+  });
+
+  // Handle clicking "Mark as Settled" on in-chat expense cards
+  document.getElementById("chat-messages")?.addEventListener("click", async e => {
+    const btn = e.target.closest(".exp-settle-btn");
+    if (!btn || !active) return;
+    const expTime = btn.dataset.expTime;
+    const tid = await threadId(active);
+    if (!tid) return;
+
+    const msgs = cacheGet(`rc_msgs_${tid}`) || [];
+    const target = msgs.find(m => m.type === "expense" && m.createdAt === expTime);
+    if (target && target.meta) {
+      target.meta.status = "settled";
+      cacheSet(`rc_msgs_${tid}`, msgs);
+      renderMsgs(msgs, active);
+      await sendMsg(active, `✓ Settled expense: ${target.meta.desc} (₹${target.meta.amount})`, "text");
+    }
+  });
 
   shareBtn?.addEventListener("click", () => {
     if (!active) return;
@@ -1110,6 +1507,82 @@ function wireInput() {
     sendMsg(active, "Shared the route", "route", {
       title: `${from} → ${to}`,
       sub:   meet ? `Meet-up points: ${meet}` : "Route shared"
+    });
+  });
+
+  // ── Roadside Photo Attachment ──
+  const photoBtn = document.getElementById("chat-attach-photo");
+  const photoInput = document.getElementById("chat-photo-input");
+  photoBtn?.addEventListener("click", () => {
+    if (!active) return;
+    photoInput?.click();
+  });
+
+  photoInput?.addEventListener("change", async (e) => {
+    const file = e.target.files?.[0];
+    if (!file || !active) return;
+    photoInput.value = ""; // Reset for re-selection
+
+    try {
+      const compressed = await window.RC_media?.compressPhoto(file, 900, 0.82);
+      if (!compressed) return;
+
+      const caption = prompt("Add a caption for this road photo (optional):", "Roadside scenic snap 📸");
+      if (caption === null) return; // User cancelled
+
+      await sendMsg(active, caption || "📸 Shared a road photo", "photo", {
+        photoUrl: compressed.dataUrl,
+        caption: caption.trim(),
+        width: compressed.width,
+        height: compressed.height,
+        sizeBytes: compressed.sizeBytes
+      });
+    } catch (err) {
+      alert("Could not process image: " + err.message);
+    }
+  });
+
+  // ── Voice Note Recording ──
+  const micBtn = document.getElementById("chat-record-voice");
+  const voiceBar = document.getElementById("chat-voice-bar");
+  const voiceTimer = document.getElementById("voice-rec-timer");
+  const voiceCancel = document.getElementById("voice-cancel-btn");
+  const voiceSend = document.getElementById("voice-send-btn");
+
+  micBtn?.addEventListener("click", () => {
+    if (!active) return;
+    if (voiceBar) voiceBar.style.display = "flex";
+
+    window.RC_media?.startVoiceRecording(
+      (secs) => {
+        if (voiceTimer) voiceTimer.textContent = window.RC_media.formatAudioTime(secs);
+      },
+      async (result) => {
+        if (voiceBar) voiceBar.style.display = "none";
+        if (result && result.audioUrl) {
+          await sendMsg(active, "🎙️ Voice note", "voice", {
+            audioUrl: result.audioUrl,
+            durationSeconds: result.durationSeconds
+          });
+        }
+      }
+    );
+  });
+
+  voiceCancel?.addEventListener("click", () => {
+    window.RC_media?.cancelVoiceRecording();
+    if (voiceBar) voiceBar.style.display = "none";
+  });
+
+  voiceSend?.addEventListener("click", () => {
+    window.RC_media?.stopVoiceRecording(async (result) => {
+      if (voiceBar) voiceBar.style.display = "none";
+      if (result && result.audioUrl && active) {
+        await sendMsg(active, "🎙️ Voice note", "voice", {
+          audioUrl: result.audioUrl,
+          durationSeconds: result.durationSeconds
+        });
+      }
     });
   });
 
@@ -1123,6 +1596,14 @@ function wireInput() {
 
 // ── Wire nav ──────────────────────────────────────────────────
 function wireNav() {
+  // ── Logout — single source of truth (nav button + profile dropdown) ──
+document.addEventListener("click", async e => {
+  const el = e.target.closest(".nav-logout-btn, .pd-logout");
+  if (!el) return;
+  e.preventDefault();
+  try { await fetch("/api/auth/logout", { method: "POST" }); } catch {}
+  window.location.replace("/index.html");
+});
   document.getElementById("nav-chat-btn")?.addEventListener("click", async () => {
     const states   = cacheGet("rc_matches") || {};
     const accepted = getAccepted(states).filter(id => getDemoData(id) || realUserCache[id]);
@@ -1203,6 +1684,13 @@ function wireTripForm() {
     if (ok) {
       restoreTripCard(data.trip);
       if (statusEl) statusEl.textContent = "✓ Trip saved — riders on matching routes can find you.";
+      window.RC_notify?.({
+        icon: "🧭",
+        title: "Trip Published!",
+        body: `Your route to ${payload.destination || "destination"} is now live and discoverable.`,
+        ts: Date.now(),
+        action: () => document.getElementById("my-trip-card")?.scrollIntoView({ behavior: "smooth" })
+      });
     } else {
       if (statusEl) statusEl.textContent = `Error: ${data.error || "Could not save trip."}`;
     }
@@ -1242,22 +1730,88 @@ function restoreTripCard(trip) {
 
 // ── Init ──────────────────────────────────────────────────────
 document.addEventListener("DOMContentLoaded", async () => {
+  wireTripForm();
+  wireTripCard();
   await wireCards();
   wireInput();
   wireNav();
-  wireTripForm();
-  wireTripCard();
   wireTravelerDrawer();
   loadAndRenderSuggestions();
   wireRealtimeEvents();  // Fix #10 — wire realtime.js custom events
-
+  initRidesHistory();
   document.addEventListener("rc:theme-changed", () => {
     loadSavedCover();
   });
 });
 
 // ── Trip detail drawer ────────────────────────────────────────
-
+// ── Ride history drawer ─────────────────────────────────────
+function ensureRidesDrawer() {
+  if (document.getElementById("rides-drawer")) return;
+  document.body.insertAdjacentHTML("beforeend", `
+    <div class="trip-drawer-overlay" id="rides-drawer-overlay"></div>
+    <div class="trip-drawer" id="rides-drawer" role="dialog" aria-modal="true">
+      <div class="td-cover" style="height:110px">
+        <button class="td-close" id="rides-close" aria-label="Close">×</button>
+        <div class="td-cover-content" style="bottom:16px">
+          <div class="td-route-hero"><span class="td-hero-city to">🕰️ My ride history</span></div>
+        </div>
+      </div>
+      <div class="td-body" id="rides-list"></div>
+    </div>`);
+  document.getElementById("rides-close")?.addEventListener("click", closeRidesDrawer);
+  document.getElementById("rides-drawer-overlay")?.addEventListener("click", closeRidesDrawer);
+  document.addEventListener("keydown", e => {
+    if (e.key === "Escape" && document.getElementById("rides-drawer")?.classList.contains("open")) closeRidesDrawer();
+  });
+}
+function closeRidesDrawer() {
+  document.getElementById("rides-drawer-overlay")?.classList.remove("open");
+  document.getElementById("rides-drawer")?.classList.remove("open");
+  document.body.style.overflow = "";
+}
+async function openRidesDrawer() {
+  ensureRidesDrawer();
+  const list = document.getElementById("rides-list");
+  list.innerHTML = `<div class="rc-reviews-loading">Loading rides…</div>`;
+  document.getElementById("rides-drawer-overlay")?.classList.add("open");
+  document.getElementById("rides-drawer")?.classList.add("open");
+  document.body.style.overflow = "hidden";
+  const { ok, data } = await apiGet("/api/rides");
+  const rides = (ok && data.rides) || [];
+  if (!rides.length) {
+    list.innerHTML = `<div class="chat-empty" style="padding:48px 20px">
+      <div class="chat-empty-icon">🏍️</div>
+      <p>No past rides yet.<br>When a trip ends — or you publish a new one — it lands here with its crew.</p>
+    </div>`;
+    return;
+  }
+  list.innerHTML = rides.map(r => {
+    const crew = (r.crew || []).map(c =>
+      c.avatarUrl
+        ? `<img class="ride-crew-avatar" src="${esc(c.avatarUrl)}" alt="${esc(c.name)}" title="${esc(c.name)}" onerror="this.style.display='none'">`
+        : `<span class="ride-crew-avatar" title="${esc(c.name)}">${esc((c.name || "?")[0])}</span>`
+    ).join("");
+    return `
+    <div class="ride-item">
+      <div class="ride-route">${esc(r.from || "?")} → ${esc(r.to || "?")}</div>
+      <div class="ride-dates">📅 ${esc(r.startDate || "")} – ${esc(r.endDate || "")} · ${esc(r.vehicle || "")}</div>
+      <div class="ride-crew">${crew || '<span class="ride-solo">Rode solo</span>'}</div>
+      <div class="ride-badge">✓ Completed</div>
+    </div>`;
+  }).join("");
+}
+function initRidesHistory() {
+  const card = document.getElementById("my-trip-card");
+  if (!card || document.getElementById("rides-history-btn")) return;
+  const btn = document.createElement("button");
+  btn.id = "rides-history-btn";
+  btn.className = "button tertiary compact";
+  btn.style.margin = "0 20px 16px";
+  btn.innerHTML = "🕰️ Ride history";
+  card.querySelector(".trip-card-body")?.appendChild(btn);
+  btn.addEventListener("click", e => { e.stopPropagation(); openRidesDrawer(); });
+}
 let _currentTrip = null;
 
 const COVER_PHOTOS = [
@@ -1324,7 +1878,11 @@ function loadSavedCover() {
   } catch {}
 }
 
-function openTripDrawer() {
+async function openTripDrawer() {
+  if (!_currentTrip) {
+    const { ok, data } = await apiGet("/api/trips/mine");
+    if (ok && data.trip) restoreTripCard(data.trip);
+  }
   if (!_currentTrip) return;
   const trip = _currentTrip;
   const el  = id => document.getElementById(id);
@@ -1368,6 +1926,9 @@ function openTripDrawer() {
   el("trip-drawer-overlay")?.classList.add("open");
   el("trip-drawer")?.classList.add("open");
   document.body.style.overflow = "hidden";
+
+  // Render interactive route map
+  window.RC_map?.renderTripDrawerMap(trip);
 }
 
 function closeTripDrawer() {
@@ -1480,8 +2041,35 @@ function wireTripCard() {
 
 // Fix #10 — handle events dispatched by realtime.js via CustomEvent
 // This guarantees chat.js is fully initialised before any handler runs
-function wireRealtimeEvents() {
+function depositLocked(meta) {
+  const title = String(meta?.title || "");
+  return /secured|locked/i.test(title);
+}
 
+function wireRealtimeEvents() {
+document.addEventListener("rc:match_cancelled", async () => {
+  await loadMutualMatches();
+  const states = await loadMatchStates();
+  syncNav(states);
+  rebuildMatchesGrid(states);
+  if (active && !canChatWith(active)) closeChat();
+});
+  // New trip published on my route — appear live, no refresh needed
+document.addEventListener("rc:trip_published", async e => {
+  const before = new Set(
+    [...document.querySelectorAll("[data-request-card]")].map(c => c.dataset.requestCard)
+  );
+  await loadAndRenderSuggestions();
+  const from = e.detail?.from;
+  if (from && !before.has(from)) {
+    const card = document.querySelector(`[data-request-card="${CSS.escape(from)}"]`);
+    if (card) {
+      card.classList.add("live-new");
+      card.scrollIntoView({ behavior: "smooth", block: "center" });
+      setTimeout(() => card.classList.remove("live-new"), 2500);
+    }
+  }
+});
   // New match request arrived — refresh real suggestions list
   document.addEventListener("rc:match_request", async () => {
     await loadAndRenderSuggestions();
@@ -1529,13 +2117,14 @@ function wireRealtimeEvents() {
 
     syncNav(states);
     rebuildMatchesGrid(states);
-
+      celebrate(innerWidth / 2, innerHeight * 0.35);   // 🎉 mutual match burst
     if (rid && canChatWith(rid)) openChat(rid);
   });
 
   // New message arrived in a thread
   document.addEventListener("rc:new_message", async e => {
-    const event       = e.detail;
+    const event = e.detail || {};
+    if (depositLocked(event.meta)) celebrate(innerWidth / 2, innerHeight * 0.35);
     const panelEl     = document.getElementById("chat-panel");
     const panelOpen   = panelEl?.classList.contains("open") ?? false;
     const isActive    = panelOpen && window._rcActiveThread === event.threadId;
@@ -1696,6 +2285,13 @@ async function openTravelerDrawer(id) {
     }
   }
 
+  // Convoy Safety & Medical ID in Traveler Drawer
+  setT("trd-blood-badge", `🩸 Blood: ${traveler.bloodGroup || "O+"}`);
+  const iceInfo = traveler.iceName || traveler.emergencyContact?.name;
+  const icePhone = traveler.icePhone || traveler.emergencyContact?.phone;
+  setT("trd-ice-badge", iceInfo ? `📞 ICE: ${iceInfo}${icePhone ? ` (${icePhone})` : ""}` : "📞 ICE: Available");
+  setT("trd-medical-notes", traveler.medicalNotes || "No critical allergies reported. Rider carries standard gear.");
+
   // Actions bar inside drawer
   const actionsWrap = el("trd-actions");
   if (actionsWrap) {
@@ -1760,6 +2356,19 @@ async function openTravelerDrawer(id) {
   el("traveler-drawer-overlay")?.classList.add("open");
   el("traveler-drawer")?.classList.add("open");
   document.body.style.overflow = "hidden";
+
+  // Render traveler route map
+  const fromCity = traveler.from || traveler.trip?.split(" → ")[0] || "";
+  const toCity   = traveler.to   || traveler.trip?.split(" → ")[1] || "";
+  const waypoints = [];
+  if (fromCity) waypoints.push({ name: fromCity, type: "source" });
+  if (traveler.meetpoints) {
+    String(traveler.meetpoints).split(/[,\/]+/).map(s => s.trim()).filter(Boolean).forEach(p => waypoints.push({ name: p, type: "meetpoint" }));
+  }
+  if (toCity) waypoints.push({ name: toCity, type: "destination" });
+  if (waypoints.length >= 2) {
+    window.RC_map?.renderRouteMap("trd-route-map", waypoints);
+  }
 }
 
 function closeTravelerDrawer() {

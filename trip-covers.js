@@ -105,7 +105,7 @@
     const type = tripType || "motorcycle";
     const trimmed = (coverUrl || "").trim();
 
-    if (isUsableCover(trimmed) && !isPooledDefault(trimmed)) {
+    if (isUsableCover(trimmed)) {
       return trimmed;
     }
 

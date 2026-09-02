@@ -112,6 +112,20 @@ function renderPlan(plan) {
     }
   }
 
+  // Render interactive route map if available
+  const mapWrap = document.getElementById("planner-map-wrap");
+  if (mapWrap && window.RC_map) {
+    const src  = document.getElementById("pl-source")?.value || "";
+    const dest = document.getElementById("pl-destination")?.value || "";
+    const stops = (plan.days || []).map(d => ({
+      location: d.to || d.from || d.title?.split(/[-–:]/)[0]?.trim() || "",
+      day: d.day,
+      title: d.title
+    }));
+    mapWrap.style.display = "block";
+    window.RC_map.renderPlannerMap(src, dest, stops);
+  }
+
   plannerDays.innerHTML = plan.days.map(d => {
     // Detect if this is a rich Gemini card or a simple demo card
     const isRich = d.from || d.rideCondition || d.hiddenGem;

@@ -134,6 +134,7 @@
   }
 
   function handleEvent(event) {
+
     switch (event.type) {
 
       case "pong":
@@ -158,7 +159,29 @@
         dispatchRC("match_request", event);
         break;
       }
-
+      case "trip_published": {
+      addNotification({
+        icon:  "🧭",
+        title: "New rider on your route",
+        body:  `${event.fromName} published a trip to ${event.to}.`,
+        ts:    Date.now(),
+        action: () => document.getElementById("requests-section")
+          ?.scrollIntoView({ behavior: "smooth", block: "start" })
+      });
+      dispatchRC("trip_published", event);
+      break;
+      }
+      case "match_cancelled": {
+        addNotification({
+          icon:  "🚪",
+          title: "Rider left the crew",
+          body:  `${event.fromName} cancelled the match.`,
+          ts:    Date.now(),
+          action: () => dispatchRC("match_cancelled", event)
+        });
+        dispatchRC("match_cancelled", event);
+        break;
+      }
       case "match_accepted": {
         addNotification({
           icon:   "🎉",
@@ -227,11 +250,70 @@
     }
   }
 
+  function dismissNotification(reqId) {
+    if (!reqId) return;
+    const idx = notifications.findIndex(n => n.reqId === reqId);
+    if (idx !== -1) {
+      notifications.splice(idx, 1);
+      if (unreadCount > 0) unreadCount--;
+      renderBell();
+      if (dropdownOpen) renderDropdown();
+    }
+  }
+
+  function initPendingNotifications() {
+    const cards = document.querySelectorAll("[data-request-card]:not(.is-accepted):not(.is-rejected)");
+    if (!cards.length) return;
+    let added = 0;
+    cards.forEach(card => {
+      const id = card.dataset.requestCard;
+      if (!id) return;
+      if (notifications.some(n => n.reqId === id)) return;
+      const name = card.querySelector(".req-name")?.childNodes[0]?.textContent?.trim() || "A rider";
+      const score = card.querySelector(".match-score")?.textContent?.trim() || "";
+      const routeFrom = card.querySelector(".from-pill")?.textContent?.trim() || "";
+      const routeTo = card.querySelector(".to-pill")?.textContent?.trim() || "";
+      const routeStr = (routeFrom && routeTo) ? ` (${routeFrom} → ${routeTo})` : "";
+
+      notifications.push({
+        icon: "🤝",
+        title: "New match request",
+        body: `${name}${score ? ` [${score}]` : ""} wants to ride with you${routeStr}!`,
+        ts: Date.now() - 30000,
+        reqId: id,
+        action: () => {
+          const target = document.querySelector(`[data-request-card="${id}"]`);
+          if (target) {
+            target.scrollIntoView({ behavior: "smooth", block: "center" });
+            target.style.outline = "2px solid var(--green)";
+            target.style.outlineOffset = "4px";
+            setTimeout(() => { target.style.outline = ""; target.style.outlineOffset = ""; }, 2000);
+          } else {
+            document.getElementById("requests-section")?.scrollIntoView({ behavior: "smooth", block: "start" });
+          }
+        }
+      });
+      added++;
+    });
+    if (added > 0) {
+      unreadCount += added;
+      renderBell();
+      if (dropdownOpen) renderDropdown();
+    }
+  }
+
+  window.RC_addNotification = addNotification;
+  window.RC_notify          = addNotification;
+  window.RC_dismissNotification = dismissNotification;
+  window.RC_initPendingNotifications = initPendingNotifications;
+
   function renderBell() {
     const badge = document.getElementById("notif-badge");
     if (!badge) return;
     badge.textContent = unreadCount > 9 ? "9+" : String(unreadCount);
     badge.hidden = unreadCount === 0;
+    const base = document.title.replace(/^\(\d+\+?\)\s*/, "");
+    document.title = unreadCount > 0 ? `(${unreadCount > 9 ? "9+" : unreadCount}) ${base}` : base;
   }
 
   // Fix #7 — re-render relative times on every dropdown open
@@ -321,6 +403,7 @@
     }
 
     renderBell();
+    setTimeout(initPendingNotifications, 400);
 
     // Fix #4 — try to connect on page load even without sessionStorage token
     // (covers page refresh case)

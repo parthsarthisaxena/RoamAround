@@ -10,7 +10,18 @@
   <script src="theme.js"></script>
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="theme-light.css">
-  <link rel="stylesheet" href="dashboard.css">
+  <link rel="stylesheet" href="dashboard.css?v=20260821">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><circle cx='32' cy='32' r='30' fill='%231a9e4a'/><text x='32' y='44' font-size='32' font-weight='bold' text-anchor='middle' fill='%230a0a0a' font-family='Arial'>R</text></svg>">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#1a9e4a">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="RoamCircle">
+  <link rel="preconnect" href="https://images.unsplash.com" crossorigin>
+  <meta property="og:title" content="RoamCircle — Find Your Ride Crew">
+  <meta property="og:description" content="Publish your trip, get matched by route, pace and habits, and ride together.">
 <style>
     /* ── Mobile nav overflow fix ───────────────────────── */
     @media (max-width: 600px) {
@@ -31,6 +42,7 @@
       #notif-wrap { flex-shrink: 0; }
     }
 </style>
+
 </head>
 <body class="page-dashboard">
 
@@ -51,6 +63,13 @@
       </button>
     </div>
     <div class="chat-tabs" id="chat-tabs" role="tablist"></div>
+    <div class="chat-balance-bar" id="chat-balance-bar" style="display:none">
+      <div class="chat-balance-pill" id="chat-balance-pill">
+        <span class="cb-icon">💳</span>
+        <span class="cb-text" id="chat-balance-text">All settled</span>
+      </div>
+      <button class="cb-quick-split" id="chat-quick-split-btn" type="button">+ Split Expense</button>
+    </div>
     <div class="chat-itinerary-snippet" id="chat-snippet">
       <div class="snippet-label">🏍️ Shared route</div>
       <div class="snippet-days" id="snippet-days">
@@ -66,9 +85,39 @@
       <div class="typing-bubbles"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div>
     </div>
     <div class="chat-input-bar">
-      <button class="chat-share-btn" id="chat-share-route" title="Share route in chat">
+      <!-- Voice recording live bar (hidden by default) -->
+      <div class="chat-voice-bar" id="chat-voice-bar" style="display:none">
+        <div class="voice-bar-left">
+          <span class="voice-rec-dot"></span>
+          <span class="voice-rec-timer" id="voice-rec-timer">0:00</span>
+          <div class="voice-wave-anim">
+            <span></span><span></span><span></span><span></span><span></span>
+          </div>
+        </div>
+        <div class="voice-bar-actions">
+          <button type="button" class="voice-cancel-btn" id="voice-cancel-btn" title="Cancel recording">🗑️ Cancel</button>
+          <button type="button" class="voice-send-btn" id="voice-send-btn" title="Send voice note">✓ Send</button>
+        </div>
+      </div>
+
+      <button class="chat-share-btn" id="chat-share-route" title="Share route in chat" type="button">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
       </button>
+      <button class="chat-split-btn" id="chat-split-expense" title="Split fuel & group expense" type="button">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        <span>Split</span>
+      </button>
+      <button class="chat-location-btn" id="chat-share-location" title="1-Tap GPS Check-in & SOS" type="button">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3m0 14v3m10-10h-3M5 12H2"/></svg>
+        <span>GPS</span>
+      </button>
+      <button class="chat-photo-btn" id="chat-attach-photo" title="Attach roadside photo" type="button">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+      </button>
+      <button class="chat-mic-btn" id="chat-record-voice" title="Record voice note" type="button">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+      </button>
+      <input type="file" id="chat-photo-input" accept="image/*" capture="environment" style="display:none">
       <div class="chat-input-wrap">
         <textarea class="chat-input" id="chat-input" placeholder="Message…" rows="1" aria-label="Message"></textarea>
       </div>
@@ -159,6 +208,24 @@
       <div class="td-section" id="td-habits-section">
         <div class="td-section-label">🧑 Habits &amp; preferences</div>
         <div class="td-habits-tags" id="td-habits-drawer"></div>
+      </div>
+
+      <!-- Interactive Route & Waypoints Map -->
+      <div class="td-section" id="td-map-section">
+        <div class="td-section-label">🗺️ Route &amp; Convoy Waypoints</div>
+        <div class="td-route-map-container">
+          <div id="td-route-map" class="td-route-map"></div>
+          <div class="td-map-actions">
+            <button class="button compact outline td-map-btn" id="td-open-gmaps-btn" type="button" title="Open in Google Maps">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+              Google Maps
+            </button>
+            <button class="button compact outline td-map-btn" id="td-download-gpx-btn" type="button" title="Download GPX file for bike GPS">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Export GPX
+            </button>
+          </div>
+        </div>
       </div>
 
       <!-- Photo picker -->
@@ -292,12 +359,40 @@
         <div class="td-habits-tags" id="trd-habits"></div>
       </div>
 
+      <!-- Convoy Safety & Medical ID Card in Traveler Drawer -->
+      <div class="td-section" id="trd-safety-section">
+        <div class="td-section-label">🩺 Rider Medical ID &amp; Emergency</div>
+        <div class="trd-safety-card">
+          <div class="trd-safety-row">
+            <span class="trd-safety-badge" id="trd-blood-badge">🩸 Blood Group: O+</span>
+            <span class="trd-safety-badge ice" id="trd-ice-badge">📞 ICE: Available</span>
+          </div>
+          <div class="trd-safety-notes" id="trd-medical-notes">No known allergies. Carry standard first-aid.</div>
+        </div>
+      </div>
+
+      <!-- Traveler Route Map -->
+      <div class="td-section" id="trd-map-section">
+        <div class="td-section-label">🗺️ Route &amp; Meet-up Waypoints</div>
+        <div class="td-route-map-container">
+          <div id="trd-route-map" class="td-route-map"></div>
+        </div>
+      </div>
+
       <!-- Sticky Bottom Actions inside drawer -->
       <div class="trd-actions" id="trd-actions" style="margin-top:24px">
       </div>
     </div>
   </aside>
 
+
+  <!-- ── Mountain Offline Mode Floating Banner ── -->
+  <aside class="mountain-offline-banner" id="mountain-offline-banner" role="status" aria-live="polite">
+    <div class="mob-content">
+      <span class="mob-icon">🏔️</span>
+      <span class="mob-text" id="mountain-offline-text"><strong>Mountain Offline Mode Active</strong> — Saved route itinerary, meetpoints, and Emergency Safety Hub are available offline.</span>
+    </div>
+  </aside>
 
   <!-- ── Topbar ── -->
 
@@ -308,6 +403,14 @@
       <a href="#ai-planner">AI planner</a>
       <a href="#requests-section">Requests <span id="request-count" class="nav-badge">0</span></a>
       <a href="#matches-section">Matches</a>
+      <button class="nav-safety-btn" id="nav-safety-btn" title="Convoy Safety Hub & SOS Beacon" type="button">
+        <span class="safety-dot-pulse"></span>
+        <span>🚨 Safety Hub</span>
+      </button>
+      <button class="nav-install-btn" id="nav-install-btn" title="Install RoamCircle App" type="button" style="display:none">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        <span>Install App</span>
+      </button>
       <button class="nav-chat-btn" id="nav-chat-btn">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M20 2H4a2 2 0 0 0-2 2v18l4-4h14a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2z"/></svg>
         Chats <span class="nav-chat-count" id="nav-chat-count" hidden>0</span>
@@ -454,11 +557,15 @@
   <main>
 
     <!-- ══ HERO ══ -->
-    <section class="dashboard-hero">
-      <p class="eyebrow">Your trip workspace</p>
-      <h1>Plan, match, ride.</h1>
-      <p>Publish your trip, find compatible travel partners going the same way, and plan together.</p>
-    </section>
+<section class="trip-workspace-hero">
+  <div class="hero-content">
+    <span class="hero-label">Your Trip Workspace</span>
+    <h1 class="hero-greeting">Hey, Parth. <span class="wave">👋</span></h1>
+    <p class="hero-subtitle">
+      Publish your trip, find compatible travel partners going the same way, and plan together.
+    </p>
+  </div>
+</section>
 
     <!-- ══ MY TRIP — Publish form ══ -->
     <section class="planner-zone" id="my-trip">
@@ -477,11 +584,11 @@
           <div class="field-row">
             <div class="field">
               <label for="source">From (source city)</label>
-              <input id="source" name="source" placeholder="e.g. Mumbai" value="Mumbai" required>
+              <input type="text" id="source" name="source" placeholder="e.g. Mumbai" value="" autocomplete="off" required>
             </div>
             <div class="field">
               <label for="destination">To (destination)</label>
-              <input id="destination" name="destination" placeholder="e.g. Ladakh" value="Ladakh" required>
+              <input type="text" id="destination" name="destination" placeholder="e.g. Ladakh" value="" required>
             </div>
           </div>
 
@@ -501,7 +608,8 @@
           <div class="field-row">
             <div class="field">
               <label for="trip-type">Trip type</label>
-              <select id="trip-type" name="trip-type">
+              <select name="tripType" id="trip-type" class="form-select" required>
+                <option value="" disabled selected>Select trip type</option>
                 <option value="motorcycle">🏍️ Motorcycle ride</option>
                 <option value="roadtrip">🚗 Road trip (car)</option>
                 <option value="cycling">🚴 Cycling</option>
@@ -512,7 +620,7 @@
             </div>
             <div class="field">
               <label for="vehicle">Vehicle / gear</label>
-              <input id="vehicle" name="vehicle" placeholder="e.g. Royal Enfield 350, Bajaj Dominar" value="Royal Enfield Himalayan">
+              <input type="text" id="vehicle" name="vehicle" placeholder="e.g. Royal Enfield Himalayan" value=""> 
             </div>
           </div>
 
@@ -521,17 +629,19 @@
           <div class="field-row">
             <div class="field">
               <label for="pace">Riding pace</label>
-              <select id="pace" name="pace">
+              <select name="pace" id="pace" class="form-select" required>
+                <option value="" disabled selected>Select riding pace</option>
                 <option value="relaxed">Relaxed — short daily distances</option>
-                <option value="moderate" selected>Moderate — 200–350 km/day</option>
+                <option value="moderate">Moderate — 200–350 km/day</option>
                 <option value="fast">Fast — 350+ km/day</option>
               </select>
             </div>
             <div class="field">
               <label for="budget">Budget per day</label>
-              <select id="budget" name="budget">
+              <select name="budget" id="budget" class="form-select" required>
+                <option value="" disabled selected>Select budget</option>
                 <option value="budget">Budget (₹500–1500)</option>
-                <option value="mid" selected>Mid (₹1500–3500)</option>
+                <option value="mid">Mid (₹1500–3500)</option>
                 <option value="comfort">Comfort (₹3500+)</option>
               </select>
             </div>
@@ -540,8 +650,9 @@
           <div class="field-row">
             <div class="field">
               <label for="gender-preference">Gender Preference for riding partners</label>
-              <select id="gender-preference" name="gender-preference">
-                <option value="any" selected>Any Gender</option>
+              <select name="genderPreference" id="gender-preference" class="form-select">
+                <option value="" disabled selected>Select preference</option>
+                <option value="any">Any Gender</option>
                 <option value="same">Same Gender Only</option>
                 <option value="male">Male Only</option>
                 <option value="female">Female Only</option>
@@ -552,50 +663,66 @@
 
           <div class="field">
             <label for="habits">Your habits & preferences</label>
-            <textarea id="habits" name="habits" rows="3" placeholder="Early starter, no alcohol, fine with camping, prefer dhabas over restaurants, carry my own toolkit…">Early starter (5am), fine with wild camping, love roadside dhabas, carry toolkit, non-smoker, prefer riding with experienced riders.</textarea>
+            <textarea 
+              name="habits" 
+              id="habits" 
+              rows="3" 
+              placeholder="e.g. Early starter (5am), fine with wild camping, love roadside dhabas..."
+              required
+            ></textarea>
           </div>
 
           <div class="field">
             <label for="meetpoints">Possible meet-up points on route</label>
-            <input id="meetpoints" name="meetpoints" placeholder="e.g. Pune, Nashik, Manali" value="Pune, Nashik, Manali, Keylong">
+            <input type="text" id="meetpoints" name="meetpoints" placeholder="e.g. Pune, Nashik, Manali, Keylong" value="">
           </div>
 
           <button class="button primary full" id="publish-btn" type="submit">Publish my trip</button>
           <p class="status" id="trip-status" aria-live="polite"></p>
         </form>
 
-        <!-- My published trip card (shown after publish) -->
-        <div class="my-trip-card" id="my-trip-card" role="button" tabindex="0" title="View full trip details">
-          <div class="trip-card-cover" id="trip-card-cover"></div>
-          <div class="trip-card-click-hint" aria-hidden="true">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
-            View full details
-          </div>
-          <div class="trip-card-body">
-            <div class="trip-card-route">
-              <div class="route-pill from" id="tc-from">Mumbai</div>
-              <div class="route-arrow">
-                <svg width="60" height="16" viewBox="0 0 60 16"><path d="M0 8h52M44 2l8 6-8 6" stroke="#1DB954" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
-              </div>
-              <div class="route-pill to" id="tc-to">Ladakh</div>
-            </div>
-            <div class="trip-card-meta">
-              <span id="tc-dates">—</span>
-              <span id="tc-type">🏍️ Motorcycle</span>
-              <span id="tc-vehicle">Royal Enfield Himalayan</span>
-            </div>
-            <div class="trip-card-habits" id="tc-habits"></div>
-            <div class="trip-card-meetpoints">
-              <span class="meet-label">Meet-up points:</span>
-              <span id="tc-meetpoints">Pune, Nashik, Manali, Keylong</span>
-            </div>
-            <div class="trip-card-status">
-              <span class="status-dot"></span> Live — visible to other travelers
-            </div>
-          </div>
-        </div>
+<!-- My published trip card -->
+<div class="my-trip-card" id="my-trip-card" role="button" tabindex="0" title="View full trip details">
+  <div class="trip-card-cover" id="trip-card-cover"></div>
 
-      </div>
+  <div class="trip-card-click-hint" aria-hidden="true">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+    View full details
+  </div>
+
+  <div class="trip-card-body">
+    <div class="trip-card-route">
+      <span class="route-pill from" id="tc-from">Mumbai</span>
+      <span class="route-arrow">
+        <svg width="34" height="12" viewBox="0 0 34 12" fill="none" stroke="#1a9e4a" stroke-width="2" stroke-linecap="round"><line x1="0" y1="6" x2="30" y2="6"/><polyline points="26 1 32 6 26 11"/></svg>
+      </span>
+      <span class="route-pill to" id="tc-to">Ladakh</span>
+    </div>
+
+    <div class="trip-card-meta">
+      <span id="tc-dates">2026-08-21 – 2026-09-20</span>
+      <span id="tc-type">🏍️ Motorcycle ride</span>
+      <span id="tc-vehicle">Royal Enfield Himalayan</span>
+    </div>
+
+    <div class="trip-card-habits" id="tc-habits">
+      <span class="habit-tag">Early starter (5am)</span>
+      <span class="habit-tag">fine with wild camping</span>
+      <span class="habit-tag">love roadside dhabas</span>
+      <span class="habit-tag">carry toolkit</span>
+      <span class="habit-tag">non-smoker</span>
+      <span class="habit-tag">experienced riders preferred</span>
+    </div>
+
+    <p class="trip-card-meetpoints">
+      <span class="meet-label">Meet-up points:</span> <span id="tc-meetpoints">Pune, Nashik, Manali, Keylong</span>
+    </p>
+
+    <div class="trip-card-status">
+      <span class="status-dot"></span> Live — visible to other travelers
+    </div>
+  </div>
+</div>
     </section>
 
 
@@ -608,18 +735,34 @@
       </div>
 
       <div class="planner-shell">
-        <!-- Planner form -->
-        <form class="planner-form" id="planner-form">
-          <div class="field-row">
-            <div class="field">
-              <label for="pl-source">From</label>
-              <input id="pl-source" name="source" placeholder="e.g. Mumbai" value="Mumbai">
-            </div>
-            <div class="field">
-              <label for="pl-destination">To</label>
-              <input id="pl-destination" name="destination" placeholder="e.g. Ladakh" value="Ladakh" required>
-            </div>
-          </div>
+<!-- Planner form -->
+<form class="planner-form" id="planner-form">
+  <div class="field-row">
+    <div class="field">
+      <label for="pl-source">From</label>
+      <input 
+        type="text" 
+        id="pl-source" 
+        name="source" 
+        placeholder="e.g. Mumbai" 
+        value="" 
+        autocomplete="off" 
+        required
+      >
+    </div>
+    <div class="field">
+      <label for="pl-destination">To</label>
+      <input 
+        type="text" 
+        id="pl-destination" 
+        name="destination" 
+        placeholder="e.g. Ladakh" 
+        value="" 
+        autocomplete="off" 
+        required
+      >
+    </div>
+  </div>
 
           <div class="field-row">
             <div class="field">
@@ -679,6 +822,9 @@
             <span class="badge" id="planner-source">Gemini</span>
           </div>
           <p id="planner-summary">Hit Generate to get a personalised day-by-day plan for your route.</p>
+          <div id="planner-map-wrap" class="planner-map-wrap" style="display:none">
+            <div id="planner-route-map" class="planner-route-map"></div>
+          </div>
           <div id="planner-insider-tip" class="planner-insider-tip" style="display:none"></div>
           <div class="days" id="planner-days">
             <article class="day-card">
@@ -695,163 +841,160 @@
         </section>
       </div>
     </section>
+<section id="requests-section" class="requests-section">
+  <div class="section-heading">
+    <h2>Incoming requests</h2>
+    <p>Riders who want to join your route.</p>
+  </div>
 
-    <!-- ══ REQUESTS ══ -->
-    <section class="dashboard-matches" id="requests-section">
-      <div class="section-heading">
-        <p class="eyebrow">Incoming requests</p>
-        <h2>Riders who want to join your route.</h2>
-        <p>People going the same direction — from the same or different source. Accept to match and open a shared chat.</p>
-      </div>
-
-      <div class="request-list" id="request-list">
-        <!-- Step 3: real registered riders are injected here by chat.js -->
-        <!-- Demo request cards below are shown until real users sign up -->
-        <div class="real-riders-label" id="real-riders-label" style="display:none">
-          <span>🌍 Real riders on your route</span>
+  <div class="request-list" id="request-list">
+    <!-- Demo Rider 1: Arjun -->
+    <div class="request-card" data-request-card="demo_arjun">
+      <div class="req-body">
+        <div class="req-top">
+          <img class="req-face" src="https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=80&h=80&fit=crop&crop=face" alt="Arjun Mehta">
+          <div class="req-info">
+            <div class="req-name">
+              Arjun Mehta
+              <span class="match-score">88% Match</span>
+            </div>
+            <div class="req-route">
+              <span class="from-pill">Pune</span>
+              <span class="route-arrow">→</span>
+              <span class="to-pill">Ladakh</span>
+            </div>
+            <div class="req-sub">Jun 12–28 · Bajaj Dominar 400 · Moderate pace</div>
+          </div>
+        </div>
+        
+        <div class="req-habits">
+          <span class="habit-tag">🌅 Early starter</span>
+          <span class="habit-tag">🛠️ Carries toolkit</span>
+          <span class="habit-tag">🏕️ Fine with camping</span>
+          <span class="habit-tag">🍛 Dhaba lover</span>
+          <span class="habit-tag">🚭 Non-smoker</span>
         </div>
 
-        <!-- Demo request cards — shown as examples until real users appear -->
-        <div class="demo-divider">
-          <span>Demo riders — example matches</span>
+        <div class="req-details-grid">
+          <div>
+            <strong>Meet-up point</strong>
+            <p>Can join at Pune or Nashik — routes converge at Nashik.</p>
+          </div>
+          <div>
+            <strong>Experience</strong>
+            <p>4 long-distance rides. Leh–Manali done twice. Familiar with high-altitude riding.</p>
+          </div>
+          <div>
+            <strong>Verification</strong>
+            <p>ID verified, 5 references, emergency contact added.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="request-actions">
+        <button class="button compact accept" type="button" data-request-action="accept">Accept</button>
+        <button class="button compact reject" type="button" data-request-action="reject">Decline</button>
+      </div>
+    </div>
+
+    <!-- Demo Rider 2: Priya -->
+    <div class="request-card" data-request-card="demo_priya">
+      <div class="req-body">
+        <div class="req-top">
+          <img class="req-face" src="https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=80&h=80&fit=crop&crop=face" alt="Priya Nair">
+          <div class="req-info">
+            <div class="req-name">
+              Priya Nair
+              <span class="match-score">82% Match</span>
+            </div>
+            <div class="req-route">
+              <span class="from-pill">Nashik</span>
+              <span class="route-arrow">→</span>
+              <span class="to-pill">Ladakh</span>
+            </div>
+            <div class="req-sub">Jun 15–30 · RE Classic 350 · Relaxed pace</div>
+          </div>
+        </div>
+        
+        <div class="req-habits">
+          <span class="habit-tag">📸 Photographer</span>
+          <span class="habit-tag">🏕️ Camping</span>
+          <span class="habit-tag">🌿 Solo rider</span>
+          <span class="habit-tag">🔧 Basic mechanic</span>
+          <span class="habit-tag">🚭 Non-smoker</span>
         </div>
 
-        <!-- Request card 1 — Arjun -->
-        <article class="request-card" id="req-arjun"
-          data-request-card="demo_arjun"
-          data-traveler-name="Arjun Mehta"
-          data-traveler-initial="A"
-          data-traveler-face="https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=120&h=120&fit=crop&crop=face"
-          data-traveler-cover="https://images.unsplash.com/photo-1558981285-6f0c94958bb6?w=600&h=200&fit=crop"
-          data-traveler-trip="Pune → Ladakh"
-          data-traveler-vehicle="Bajaj Dominar 400"
-          data-traveler-dates="Jun 12 – Jun 28">
-          <div class="req-cover" style="background-image:url('https://images.unsplash.com/photo-1558981285-6f0c94958bb6?w=600&h=200&fit=crop')"></div>
-          <div class="req-body">
-            <div class="req-top">
-              <img class="req-face" src="https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=80&h=80&fit=crop&crop=face" alt="Arjun">
-              <div class="req-info">
-                <div class="req-name">Arjun Mehta <span class="match-score">88% match</span></div>
-                <div class="req-route">
-                  <span class="from-pill">Pune</span>
-                  <svg width="28" height="10" viewBox="0 0 28 10"><path d="M0 5h22M18 1l5 4-5 4" stroke="#1DB954" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>
-                  <span class="to-pill">Ladakh</span>
-                </div>
-                <div class="req-sub">Jun 12–28 · Bajaj Dominar 400 · Moderate pace</div>
-              </div>
-            </div>
-
-            <div class="req-habits">
-              <div class="habit-tag">🌅 Early starter</div>
-              <div class="habit-tag">🛠️ Carries toolkit</div>
-              <div class="habit-tag">🏕️ Fine with camping</div>
-              <div class="habit-tag">🍛 Dhaba lover</div>
-              <div class="habit-tag">🚭 Non-smoker</div>
-            </div>
-
-            <div class="req-details-grid">
-              <div><strong>Meet-up point</strong><p>Can join at Pune or Nashik — routes converge at Nashik.</p></div>
-              <div><strong>Experience</strong><p>4 long-distance rides. Leh–Manali done twice. Familiar with high-altitude riding.</p></div>
-              <div><strong>Verification</strong><p>ID verified, 5 references, emergency contact added.</p></div>
-            </div>
-            <div class="request-actions" id="actions-arjun">
-              <button class="button compact accept" type="button" data-request-action="accept">Accept</button>
-              <button class="button compact reject" type="button" data-request-action="reject">Decline</button>
-            </div>
+        <div class="req-details-grid">
+          <div>
+            <strong>Meet-up point</strong>
+            <p>Nashik — solo from there. Ready to match pace on mountain sections.</p>
           </div>
-        </article>
-
-        <!-- Request card 2 — Priya -->
-        <article class="request-card" id="req-priya"
-          data-request-card="demo_priya"
-          data-traveler-name="Priya Nair"
-          data-traveler-initial="P"
-          data-traveler-face="https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=120&h=120&fit=crop&crop=face"
-          data-traveler-cover="https://images.unsplash.com/photo-1596738520741-38e3cc17439f?w=600&h=200&fit=crop"
-          data-traveler-trip="Nashik → Ladakh"
-          data-traveler-vehicle="Royal Enfield Classic 350"
-          data-traveler-dates="Jun 15 – Jun 30">
-          <div class="req-cover" style="background-image:url('https://images.unsplash.com/photo-1596738520741-38e3cc17439f?w=600&h=200&fit=crop')"></div>
-          <div class="req-body">
-            <div class="req-top">
-              <img class="req-face" src="https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=80&h=80&fit=crop&crop=face" alt="Priya">
-              <div class="req-info">
-                <div class="req-name">Priya Nair <span class="match-score">82% match</span></div>
-                <div class="req-route">
-                  <span class="from-pill">Nashik</span>
-                  <svg width="28" height="10" viewBox="0 0 28 10"><path d="M0 5h22M18 1l5 4-5 4" stroke="#1DB954" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>
-                  <span class="to-pill">Ladakh</span>
-                </div>
-                <div class="req-sub">Jun 15–30 · Royal Enfield Classic 350 · Relaxed pace</div>
-              </div>
-            </div>
-
-            <div class="req-habits">
-              <div class="habit-tag">📸 Travel photographer</div>
-              <div class="habit-tag">🏕️ Camping enthusiast</div>
-              <div class="habit-tag">🌿 Solo rider</div>
-              <div class="habit-tag">🔧 Basic mechanic</div>
-              <div class="habit-tag">🚭 Non-smoker</div>
-            </div>
-
-            <div class="req-details-grid">
-              <div><strong>Meet-up point</strong><p>Can join the group at Nashik — riding solo from there and happy to merge routes.</p></div>
-              <div><strong>Experience</strong><p>Spiti Valley done, Karnataka coastal route. First Ladakh trip but well-prepared.</p></div>
-              <div><strong>Verification</strong><p>Photo verified, Instagram linked, 3 completed rides.</p></div>
-            </div>
-            <div class="request-actions" id="actions-priya">
-              <button class="button compact accept" type="button" data-request-action="accept">Accept</button>
-              <button class="button compact reject" type="button" data-request-action="reject">Decline</button>
-            </div>
+          <div>
+            <strong>Experience</strong>
+            <p>Spiti Valley circuit, Karnataka coastal route. First Ladakh trip.</p>
           </div>
-        </article>
-
-        <!-- Request card 3 — Rohan -->
-        <article class="request-card" id="req-rohan"
-          data-request-card="demo_rohan"
-          data-traveler-name="Rohan Das"
-          data-traveler-initial="R"
-          data-traveler-face="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=120&h=120&fit=crop&crop=face"
-          data-traveler-cover="https://images.unsplash.com/photo-1604537466608-109fa2f16c3b?w=600&h=200&fit=crop"
-          data-traveler-trip="Delhi → Ladakh"
-          data-traveler-vehicle="KTM Adventure 390"
-          data-traveler-dates="Jun 10 – Jun 22">
-          <div class="req-cover" style="background-image:url('https://images.unsplash.com/photo-1604537466608-109fa2f16c3b?w=600&h=200&fit=crop')"></div>
-          <div class="req-body">
-            <div class="req-top">
-              <img class="req-face" src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=80&h=80&fit=crop&crop=face" alt="Rohan">
-              <div class="req-info">
-                <div class="req-name">Rohan Das <span class="match-score">74% match</span></div>
-                <div class="req-route">
-                  <span class="from-pill">Delhi</span>
-                  <svg width="28" height="10" viewBox="0 0 28 10"><path d="M0 5h22M18 1l5 4-5 4" stroke="#1DB954" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>
-                  <span class="to-pill">Ladakh</span>
-                </div>
-                <div class="req-sub">Jun 10–22 · KTM Adventure 390 · Fast pace</div>
-              </div>
-            </div>
-
-            <div class="req-habits">
-              <div class="habit-tag">⚡ Fast rider</div>
-              <div class="habit-tag">🏨 Prefers guesthouses</div>
-              <div class="habit-tag">🛠️ Experienced mechanic</div>
-              <div class="habit-tag">📡 Satellite phone</div>
-            </div>
-
-            <div class="req-details-grid">
-              <div><strong>Meet-up point</strong><p>Different source but can sync at Manali — common pit stop on both routes.</p></div>
-              <div><strong>Experience</strong><p>7 long-distance rides including Leh–Srinagar. Very experienced, fast-paced rider.</p></div>
-              <div><strong>Verification</strong><p>Email verified, LinkedIn linked. Pace may differ — worth discussing first.</p></div>
-            </div>
-            <div class="request-actions" id="actions-rohan">
-              <button class="button compact accept" type="button" data-request-action="accept">Accept</button>
-              <button class="button compact reject" type="button" data-request-action="reject">Decline</button>
-            </div>
+          <div>
+            <strong>Verification</strong>
+            <p>Photo verified, Instagram linked, emergency contact added.</p>
           </div>
-        </article>
-
+        </div>
       </div>
-    </section>
+
+      <div class="request-actions">
+        <button class="button compact accept" type="button" data-request-action="accept">Accept</button>
+        <button class="button compact reject" type="button" data-request-action="reject">Decline</button>
+      </div>
+    </div>
+
+    <!-- Demo Rider 3: Rohan -->
+    <div class="request-card" data-request-card="demo_rohan">
+      <div class="req-body">
+        <div class="req-top">
+          <img class="req-face" src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=80&h=80&fit=crop&crop=face" alt="Rohan Das">
+          <div class="req-info">
+            <div class="req-name">
+              Rohan Das
+              <span class="match-score">74% Match</span>
+            </div>
+            <div class="req-route">
+              <span class="from-pill">Delhi</span>
+              <span class="route-arrow">→</span>
+              <span class="to-pill">Ladakh</span>
+            </div>
+            <div class="req-sub">Jun 10–22 · KTM Adventure 390 · Fast pace</div>
+          </div>
+        </div>
+        
+        <div class="req-habits">
+          <span class="habit-tag">⚡ Fast rider</span>
+          <span class="habit-tag">🏨 Guesthouses</span>
+          <span class="habit-tag">🛠️ Expert mechanic</span>
+          <span class="habit-tag">📡 Satellite phone</span>
+        </div>
+
+        <div class="req-details-grid">
+          <div>
+            <strong>Meet-up point</strong>
+            <p>Manali sync point — arrive day 5 evening, ride together from day 6.</p>
+          </div>
+          <div>
+            <strong>Experience</strong>
+            <p>11 long-distance rides. 3 Ladakh trips. Expert mechanic.</p>
+          </div>
+          <div>
+            <strong>Verification</strong>
+            <p>Email verified, LinkedIn linked, satellite phone on board.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="request-actions">
+        <button class="button compact accept" type="button" data-request-action="accept">Accept</button>
+        <button class="button compact reject" type="button" data-request-action="reject">Decline</button>
+      </div>
+    </div>
+  </div>
+</section>
 
     <!-- ══ MY MATCHES ══ -->
     <section class="matches-section" id="matches-section">
@@ -872,19 +1015,6 @@
 
 
   <script>
-    // Pick up WS token stored at login and connect
-    const _wsToken = sessionStorage.getItem("rc_ws_token");
-    if (_wsToken && window.RC_setWsToken) {
-      sessionStorage.removeItem("rc_ws_token");
-      window.RC_setWsToken(_wsToken);
-    }
-
-    // Logout
-    document.getElementById("nav-logout")?.addEventListener("click", async () => {
-      await fetch("/api/auth/logout", { method: "POST" });
-      window.location.href = "/login.html";
-    });
-
     // Profile avatar dropdown toggle
     const profileNavWrap = document.getElementById("profile-nav-wrap");
     const profileDropdown= document.getElementById("profile-dropdown");
@@ -1164,10 +1294,16 @@
   </script>
   <script src="animate.js"></script>
   <script src="realtime.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script src="map.js"></script>
+  <script src="expenses.js"></script>
+  <script src="safety.js"></script>
+  <script src="media.js"></script>
+  <script src="pwa.js"></script>
   <script src="script.js"></script>
   <script src="ratings.js"></script>
   <script src="trip-covers.js"></script>
-  <script src="chat.js"></script>
+  <script src="chat.js?v=2"></script>
   <script>
     (function () {
       const topbar = document.getElementById("site-topbar");
@@ -1177,5 +1313,663 @@
       window.addEventListener("scroll", onScroll, { passive: true });
     })();
   </script>
+  <script>
+// ── Logout — await cookie clear BEFORE navigating (fix #23) ──
+(function () {
+  const btn = document.getElementById("nav-logout") || document.querySelector(".pd-logout");
+  if (!btn || btn.dataset.wired) return;
+  btn.dataset.wired = "1";
+  btn.addEventListener("click", async () => {
+    btn.disabled = true;
+    try { await fetch("/api/auth/logout", { method: "POST" }); } catch {}
+    window.location.replace("/index.html");
+  });
+})();
+// Update preview card background when trip type changes
+const tripTypeSelect = document.querySelector('select[name="tripType"]'); // adjust selector
+const previewCard = document.querySelector('.trip-preview-card');
+
+if (tripTypeSelect && previewCard) {
+  tripTypeSelect.addEventListener('change', (e) => {
+    previewCard.classList.remove('motorcycle', 'car', 'cycling', 'hiking', 'backpacking');
+    
+    const typeMap = {
+      'motorcycle': 'motorcycle',
+      'road-trip': 'car',
+      'cycling': 'cycling',
+      'hiking': 'hiking',
+      'backpacking': 'backpacking'
+    };
+    
+    const className = typeMap[e.target.value] || 'motorcycle';
+    previewCard.classList.add(className);
+  });
+}
+</script>
+<script>
+// ── Footer Info Modal Logic ──
+(function() {
+  const content = {
+    terms: {
+      title: "Terms & Conditions",
+      html: `<h4>1. Acceptance of Terms</h4>
+             <p>By using RoamCircle, you agree to these terms. We provide a platform for travelers to connect; we do not act as a travel agency or guarantee the safety of any trip.</p>
+             <h4>2. User Conduct</h4>
+             <p>You agree to provide accurate profile information, respect other riders, and not use the platform for spam, harassment, or illegal activities.</p>
+             <h4>3. Payments & Deposits</h4>
+             <p>Optional good-faith deposits are processed via Razorpay. Refunds are governed by the specific trip agreement between riders. RoamCircle acts only as a facilitator.</p>
+             <h4>4. Liability</h4>
+             <p>Riders participate in trips at their own risk. RoamCircle is not liable for accidents, losses, or disputes arising from matched trips.</p>`
+    },
+    privacy: {
+      title: "Privacy Policy",
+      html: `<h4>1. Information We Collect</h4>
+             <p>We collect profile data (name, bio, riding habits), trip details (routes, dates), and authentication data. We do not sell your data to third parties.</p>
+             <h4>2. How We Use Your Data</h4>
+             <p>Your data is used solely for matching you with compatible riders, generating AI route plans, and facilitating chat. Location data is only used for route matching.</p>
+             <h4>3. Data Sharing</h4>
+             <p>Your profile is visible to other riders on your route. Once you mutually match, your chat and trip details are shared with your crew. You can delete your account and data at any time.</p>
+             <h4>4. Security</h4>
+             <p>Passwords are bcrypt-hashed. Sessions use httpOnly cookies. We employ rate-limiting and input validation to prevent abuse.</p>`
+    },
+    safety: {
+      title: "Safety Tips",
+      html: `<h4>Before You Ride</h4>
+             <ul>
+               <li><strong>Verify your match:</strong> Check their profile, past rides, and reviews. Use the in-app chat to get a feel for their riding style.</li>
+               <li><strong>Share your itinerary:</strong> Always share your route, daily stops, and match details with a friend or family member not on the trip.</li>
+               <li><strong>Meet in public:</strong> For your first meetup, choose a well-known, public location like a major fuel station or cafe.</li>
+             </ul>
+             <h4>On the Road</h4>
+             <ul>
+               <li><strong>Trust your gut:</strong> If something feels off about a rider or the pace, it's okay to leave the crew. Use the "Leave Crew" button anytime.</li>
+               <li><strong>Ride your own ride:</strong> Don't feel pressured to match a faster pace if you're uncomfortable. Safety over speed.</li>
+               <li><strong>Emergency contacts:</strong> Keep local emergency numbers and your insurance details accessible offline.</li>
+             </ul>`
+    },
+    community: {
+      title: "Community Guidelines",
+      html: `<h4>Our Core Values</h4>
+             <p>RoamCircle is built on mutual respect, shared passion for the road, and safety.</p>
+             <h4>Be Respectful</h4>
+             <p>Treat all riders with respect regardless of experience level, gender, or background. Harassment, hate speech, or discrimination will result in an immediate ban.</p>
+             <h4>Be Authentic</h4>
+             <p>Use real photos and honest descriptions of your riding style and experience. Misrepresenting yourself puts others at risk.</p>
+             <h4>Be Reliable</h4>
+             <p>If you commit to a crew, show up. If your plans change, communicate early and use the "Leave Crew" feature so others aren't left hanging.</p>`
+    },
+    careers: {
+      title: "Careers",
+      html: `<h4>Join the Crew</h4>
+             <p>We're building the future of travel companionship. We're always looking for passionate engineers, designers, and riders who want to solve real problems.</p>
+             <p>If you're interested in joining our team, drop us a line with your portfolio and favorite riding route:</p>
+             <p>📧 <a href="mailto:careers@roamcircle.app">careers@roamcircle.app</a></p>`
+    },
+    download: {
+      title: "Mobile App",
+      html: `<h4>Coming Soon</h4>
+             <p>Our native iOS and Android apps are currently in development. They will feature offline maps, real-time location sharing, and push notifications for ride updates.</p>
+             <p>For now, the web app is fully optimized for mobile browsers. Add it to your home screen for an app-like experience!</p>
+             <p>📧 Join the waitlist: <a href="mailto:app@roamcircle.app">app@roamcircle.app</a></p>`
+    }
+  };
+
+  // Map link text to content keys
+  function getKey(text) {
+    const t = text.toLowerCase();
+    if (t.includes('terms')) return 'terms';
+    if (t.includes('privacy')) return 'privacy';
+    if (t.includes('safety')) return 'safety';
+    if (t.includes('community')) return 'community';
+    if (t.includes('careers')) return 'careers';
+    if (t.includes('download') || t.includes('ios') || t.includes('android')) return 'download';
+    return null;
+  }
+
+  // Wire up links
+  document.querySelectorAll('.footer-col a').forEach(link => {
+    link.addEventListener('click', (e) => {
+      e.preventDefault();
+      const key = getKey(link.textContent);
+      if (key && content[key]) {
+        document.getElementById('info-modal-title').textContent = content[key].title;
+        document.getElementById('info-modal-body').innerHTML = content[key].html;
+        document.getElementById('info-modal-overlay').classList.add('open');
+        document.getElementById('info-modal').classList.add('open');
+        document.body.style.overflow = 'hidden'; // Prevent background scrolling
+      }
+    });
+  });
+
+  // Close logic
+  function closeInfoModal() {
+    document.getElementById('info-modal-overlay').classList.remove('open');
+    document.getElementById('info-modal').classList.remove('open');
+    document.body.style.overflow = '';
+  }
+  document.getElementById('info-modal-close').addEventListener('click', closeInfoModal);
+  document.getElementById('info-modal-overlay').addEventListener('click', closeInfoModal);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeInfoModal(); });
+})();
+</script>
+<!-- ── Footer ── -->
+<footer class="rc-footer">
+  <div class="footer-grid">
+    <!-- Brand Column -->
+    <div class="footer-brand">
+      <div class="footer-logo-wrap">
+        <div class="footer-logo-icon">R</div>
+        <span class="footer-logo-text">RoamCircle</span>
+      </div>
+      <p class="footer-email">support@roamcircle.app</p>
+      <div class="footer-socials">
+        <a href="#" aria-label="TikTok"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"/></svg></a>
+        <a href="#" aria-label="LinkedIn"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 0 1-2.063-2.065 2.063 2.063 0 1 1 2.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg></a>
+        <a href="#" aria-label="X (Twitter)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></a>
+        <a href="#" aria-label="YouTube"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg></a>
+        <a href="#" aria-label="Instagram"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881 1.44 1.44 0 0 0 0-2.881z"/></svg></a>
+      </div>
+    </div>
+
+     <!-- About Column -->
+    <div class="footer-col">
+      <h4>About</h4>
+      <ul>
+        <li><a href="#" data-info="careers">Careers</a></li>
+        <li><a href="#" data-info="ios">iOS Download</a></li>
+        <li><a href="#" data-info="android">Android Download</a></li>
+      </ul>
+    </div>
+
+    <!-- Info Column -->
+    <div class="footer-col">
+      <h4>Info</h4>
+      <ul>
+        <li><a href="#" data-info="terms">Terms & Conditions</a></li>
+        <li><a href="#" data-info="privacy">Privacy Policy</a></li>
+        <li><a href="#" data-info="safety">Safety Tips</a></li>
+        <li><a href="#" data-info="community">Community Guidelines</a></li>
+      </ul>
+    </div>
+  <!-- ── Crew Expense & Fuel Splitter Modal ── -->
+  <div class="expense-modal-overlay" id="expense-modal-overlay"></div>
+  <div class="expense-modal" id="expense-modal" role="dialog" aria-modal="true" aria-labelledby="exp-modal-title">
+    <div class="exp-modal-header">
+      <div class="exp-modal-title-wrap">
+        <span class="exp-modal-icon">⛽</span>
+        <h2 id="exp-modal-title" class="exp-modal-title">Split Convoy Expense</h2>
+      </div>
+      <button class="exp-modal-close" id="expense-modal-close" aria-label="Close expense modal">×</button>
+    </div>
+
+    <div class="exp-modal-tabs">
+      <button class="exp-tab-btn active" data-tab="quick" type="button">⚡ Quick Expense</button>
+      <button class="exp-tab-btn" data-tab="fuel" type="button">⛽ Fuel Calculator</button>
+    </div>
+
+    <div class="exp-modal-body">
+      <!-- Quick Expense Tab -->
+      <div id="exp-quick-section" class="exp-section">
+        <div class="exp-field-label">Select Category</div>
+        <div class="exp-cat-chips">
+          <button type="button" class="exp-cat-chip active" data-cat="fuel">⛽ Fuel</button>
+          <button type="button" class="exp-cat-chip" data-cat="food">🍛 Food / Dhaba</button>
+          <button type="button" class="exp-cat-chip" data-cat="stay">🏨 Stay / Camp</button>
+          <button type="button" class="exp-cat-chip" data-cat="toll">🛣️ Toll / Pass</button>
+          <button type="button" class="exp-cat-chip" data-cat="repair">🔧 Spares / Fix</button>
+          <button type="button" class="exp-cat-chip" data-cat="other">🏷️ Other</button>
+        </div>
+
+        <div class="exp-field">
+          <label for="exp-amount">Total Amount (₹)</label>
+          <input type="number" id="exp-amount" class="exp-input" placeholder="e.g. 2400" min="1" step="10">
+        </div>
+
+        <div class="exp-presets">
+          <button type="button" class="exp-preset-btn" data-amount="500">₹500</button>
+          <button type="button" class="exp-preset-btn" data-amount="1000">₹1,000</button>
+          <button type="button" class="exp-preset-btn" data-amount="2000">₹2,000</button>
+          <button type="button" class="exp-preset-btn" data-amount="3500">₹3,500</button>
+          <button type="button" class="exp-preset-btn" data-amount="5000">₹5,000</button>
+        </div>
+
+        <div class="exp-field">
+          <label for="exp-desc">Description</label>
+          <input type="text" id="exp-desc" class="exp-input" placeholder="e.g. Fuel at Keylong Highway">
+        </div>
+      </div>
+
+      <!-- Fuel Calculator Tab -->
+      <div id="exp-fuel-section" class="exp-section" style="display:none">
+        <div class="exp-grid-row">
+          <div class="exp-field">
+            <label for="exp-fuel-dist">Leg Distance (km)</label>
+            <input type="number" id="exp-fuel-dist" class="exp-input" value="300" min="10" step="10">
+          </div>
+          <div class="exp-field">
+            <label for="exp-fuel-mileage">Mileage (km/L)</label>
+            <input type="number" id="exp-fuel-mileage" class="exp-input" value="30" min="5" step="1">
+          </div>
+        </div>
+        <div class="exp-field">
+          <label for="exp-fuel-rate">Fuel Rate (₹/L)</label>
+          <input type="number" id="exp-fuel-rate" class="exp-input" value="102" min="50" step="1">
+        </div>
+        <div class="exp-fuel-calc-badge">
+          <span>Calculated: <strong id="exp-calc-liters">10.0 L fuel</strong></span>
+        </div>
+      </div>
+
+      <!-- Split Preview Card -->
+      <div class="exp-preview-card">
+        <div class="exp-preview-col">
+          <span class="exp-preview-lbl">Total Cost</span>
+          <strong class="exp-preview-val" id="exp-preview-total">₹0</strong>
+        </div>
+        <div class="exp-preview-divider"></div>
+        <div class="exp-preview-col">
+          <span class="exp-preview-lbl">Each Rider's Share (50%)</span>
+          <strong class="exp-preview-val green" id="exp-preview-share">₹0</strong>
+        </div>
+      </div>
+    </div>
+
+    <div class="exp-modal-footer">
+      <button type="button" class="button primary full" id="exp-submit-btn">Post Expense in Chat</button>
+    </div>
+  </div>
+
+  <!-- ── Convoy Safety Hub & Rider SOS Modal ── -->
+  <div class="safety-modal-overlay" id="safety-modal-overlay"></div>
+  <div class="safety-modal" id="safety-modal" role="dialog" aria-modal="true" aria-labelledby="safety-modal-title">
+    <div class="safety-modal-header">
+      <div class="safety-modal-title-wrap">
+        <span class="safety-modal-icon">🚨</span>
+        <div>
+          <h2 id="safety-modal-title" class="safety-modal-title">Convoy Safety Hub &amp; SOS</h2>
+          <p class="safety-modal-sub">Rider emergency beacon, ICE contacts, and high-altitude safety</p>
+        </div>
+      </div>
+      <button class="safety-modal-close" id="safety-modal-close" aria-label="Close safety hub">×</button>
+    </div>
+
+    <div class="safety-modal-tabs">
+      <button class="safety-tab-btn active" data-tab="sos" type="button">🚨 Emergency SOS</button>
+      <button class="safety-tab-btn" data-tab="medical" type="button">🩺 Medical ID</button>
+      <button class="safety-tab-btn" data-tab="checklist" type="button">🏔️ Remote Checklist</button>
+    </div>
+
+    <!-- SOS Tab -->
+    <div class="safety-tab-content active" id="safety-tab-sos">
+      <div class="safety-sos-hero-card">
+        <div class="safety-sos-badge-row">
+          <span class="safety-live-badge"><span class="safety-dot-pulse"></span> READY FOR BROADCAST</span>
+          <span class="safety-bg-pill">🩸 Blood: <strong id="sos-blood-group-badge">O+</strong></span>
+        </div>
+        <h3 class="safety-sos-title">Convoy Distress Beacon</h3>
+        <p class="safety-sos-desc">Press below to broadcast your precise GPS coordinates, Medical ID, and distress signal to your convoy chat thread.</p>
+        
+        <div class="safety-sos-reason-wrap">
+          <input type="text" id="safety-sos-reason" class="safety-input" placeholder="Emergency Reason (e.g. Breakdown, Fall, Medical issue)" value="Immediate Convoy Assistance / Breakdown">
+        </div>
+
+        <button type="button" class="safety-sos-big-btn" id="safety-sos-big-btn">
+          <span class="sos-icon-pulse">🚨</span>
+          <span class="sos-btn-text">BROADCAST EMERGENCY SOS</span>
+          <span class="sos-btn-sub">Tap to initiate 3-sec emergency dispatch</span>
+        </button>
+
+        <!-- Countdown abort overlay -->
+        <div class="sos-countdown-overlay" id="sos-countdown-overlay" style="display:none">
+          <div class="sos-countdown-box">
+            <div class="sos-countdown-num" id="sos-countdown-number">3</div>
+            <div class="sos-countdown-title">BROADCASTING SOS TO CONVOY...</div>
+            <p class="sos-countdown-sub">Acquiring GPS coordinates &amp; dispatching alert card</p>
+            <button type="button" class="button compact reject" id="sos-countdown-abort">ABORT (Cancel SOS)</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Helplines -->
+      <div class="safety-section-title">📞 24/7 Indian Emergency Helplines (1-Tap Dial)</div>
+      <div class="safety-helplines-grid">
+        <a href="tel:112" class="safety-helpline-card highlight">
+          <span class="sh-icon">🚨</span>
+          <div class="sh-info">
+            <div class="sh-name">National Emergency (All-in-One)</div>
+            <div class="sh-num">112</div>
+          </div>
+          <span class="sh-action">Call ↗</span>
+        </a>
+        <a href="tel:1033" class="safety-helpline-card">
+          <span class="sh-icon">🛣️</span>
+          <div class="sh-info">
+            <div class="sh-name">NHAI Highway Patrol &amp; Breakdown</div>
+            <div class="sh-num">1033</div>
+          </div>
+          <span class="sh-action">Call ↗</span>
+        </a>
+        <a href="tel:108" class="safety-helpline-card">
+          <span class="sh-icon">🚑</span>
+          <div class="sh-info">
+            <div class="sh-name">Emergency Medical Ambulance</div>
+            <div class="sh-num">108</div>
+          </div>
+          <span class="sh-action">Call ↗</span>
+        </a>
+        <a href="tel:100" class="safety-helpline-card">
+          <span class="sh-icon">👮</span>
+          <div class="sh-info">
+            <div class="sh-name">Police Dispatch</div>
+            <div class="sh-num">100</div>
+          </div>
+          <span class="sh-action">Call ↗</span>
+        </a>
+      </div>
+
+      <div class="safety-ice-quick-row">
+        <a href="tel:112" class="button outline full" id="sos-quick-ice-call">📞 Call Primary ICE Contact</a>
+      </div>
+    </div>
+
+    <!-- Medical ID Tab -->
+    <div class="safety-tab-content" id="safety-tab-medical">
+      <div class="safety-med-form">
+        <p class="safety-tab-intro">This Medical ID is stored locally and attached to your emergency check-ins so fellow riders and rescue medics can assist you immediately.</p>
+        
+        <div class="safety-form-grid">
+          <div class="field">
+            <label>BLOOD GROUP</label>
+            <select id="safety-med-blood-group" class="safety-select">
+              <option value="O+">O+ (Universal Donor)</option>
+              <option value="O-">O-</option>
+              <option value="A+">A+</option>
+              <option value="A-">A-</option>
+              <option value="B+">B+</option>
+              <option value="B-">B-</option>
+              <option value="AB+">AB+</option>
+              <option value="AB-">AB-</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>ICE CONTACT NAME</label>
+            <input type="text" id="safety-med-ice-name" class="safety-input" placeholder="e.g. Ramesh Mehta">
+          </div>
+          <div class="field">
+            <label>ICE CONTACT PHONE</label>
+            <input type="tel" id="safety-med-ice-phone" class="safety-input" placeholder="e.g. +91 98230 45678">
+          </div>
+          <div class="field">
+            <label>RELATIONSHIP</label>
+            <input type="text" id="safety-med-ice-relation" class="safety-input" placeholder="e.g. Brother / Spouse">
+          </div>
+        </div>
+
+        <div class="field" style="margin-top:12px">
+          <label>MEDICAL CONDITIONS, ALLERGIES &amp; MEDICATIONS</label>
+          <textarea id="safety-med-notes" class="safety-textarea" rows="3" placeholder="e.g. Inhaler in tank bag, Penicillin allergy, wear glasses, carry Diamox"></textarea>
+        </div>
+
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:16px">
+          <span id="safety-med-save-status" style="font-size:0.85rem;font-weight:700"></span>
+          <button type="button" class="button primary" id="safety-save-med-btn">Save Medical ID</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Remote Checklist Tab -->
+    <div class="safety-tab-content" id="safety-tab-checklist">
+      <div class="safety-checklist-header">
+        <div>
+          <div class="safety-checklist-title">🏔️ High-Altitude &amp; Overland Safety Check</div>
+          <div class="safety-checklist-sub" id="safety-checklist-progress-text">0 of 9 safety checks completed</div>
+        </div>
+        <div class="safety-progress-bar-wrap">
+          <div class="safety-progress-bar" id="safety-checklist-progress-bar" style="width:0%"></div>
+        </div>
+      </div>
+
+      <div class="safety-checklist-group">
+        <div class="safety-group-label">🩺 High Altitude &amp; AMS Protocol (Leh / Spiti / Mountain Passes)</div>
+        <label class="safety-check-item">
+          <input type="checkbox" data-key="ams_acclim">
+          <span><strong>Day 1 Acclimatization Rest:</strong> Stay at 3,500m (Leh/Manali) for 24–48h before ascending high passes (Khardung La / Tanglang La).</span>
+        </label>
+        <label class="safety-check-item">
+          <input type="checkbox" data-key="ams_hydration">
+          <span><strong>Hydration Tracker:</strong> 4–5 Liters of water + ORS electrolytes daily. Strictly avoid alcohol at high altitude.</span>
+        </label>
+        <label class="safety-check-item">
+          <input type="checkbox" data-key="ams_diamox">
+          <span><strong>Diamox / AMS Meds:</strong> Carry Acetazolamide (Diamox 125/250mg) and portable pulse oximeter in crew kit.</span>
+        </label>
+      </div>
+
+      <div class="safety-checklist-group">
+        <div class="safety-group-label">🛠️ Bike Mechanical &amp; Remote Spares</div>
+        <label class="safety-check-item">
+          <input type="checkbox" data-key="bike_puncture">
+          <span><strong>Tubeless Puncture Kit &amp; 12V Inflator:</strong> Strips, reamer tool, CO2 cartridges or battery tyre pump.</span>
+        </label>
+        <label class="safety-check-item">
+          <input type="checkbox" data-key="bike_spares">
+          <span><strong>Critical Spares:</strong> Spare clutch cable, brake lever, chain master link, fuses, and chain lube spray.</span>
+        </label>
+        <label class="safety-check-item">
+          <input type="checkbox" data-key="bike_fuel">
+          <span><strong>Reserve Fuel Strategy:</strong> Jerry cans / bladder filled for 350+ km zero-petrol pump stretches (e.g. Karu → Tandi).</span>
+        </label>
+      </div>
+
+      <div class="safety-checklist-group">
+        <div class="safety-group-label">📡 Cold Weather &amp; Remote Survival</div>
+        <label class="safety-check-item">
+          <input type="checkbox" data-key="gear_offline_map">
+          <span><strong>Offline Navigation Ready:</strong> GPX track loaded into Garmin/phone and physical/offline OpenStreetMap downloaded.</span>
+        </label>
+        <label class="safety-check-item">
+          <input type="checkbox" data-key="gear_thermal">
+          <span><strong>Thermal &amp; Rain Layering:</strong> Windproof thermal liners, Gore-Tex gloves, and waterproof boot covers.</span>
+        </label>
+        <label class="safety-check-item">
+          <input type="checkbox" data-key="gear_firstaid">
+          <span><strong>Trauma First-Aid Kit:</strong> Pressure bandages, antiseptic spray, burn gel, pain relievers, and emergency foil bivy blanket.</span>
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Photo Lightbox Modal ── -->
+  <div class="photo-lightbox-overlay" id="photo-lightbox-overlay"></div>
+  <div class="photo-lightbox-modal" id="photo-lightbox-modal" role="dialog" aria-modal="true">
+    <button class="photo-lightbox-close" id="photo-lightbox-close" aria-label="Close photo">×</button>
+    <div class="photo-lightbox-body">
+      <img src="" alt="Road Photo" id="photo-lightbox-img" class="photo-lightbox-img">
+      <div class="photo-lightbox-caption" id="photo-lightbox-caption"></div>
+    </div>
+  </div>
+
+  <!-- ── Info Modal ── -->
+<div class="info-modal-overlay" id="info-modal-overlay"></div>
+<div class="info-modal" id="info-modal" role="dialog" aria-modal="true">
+  <button class="info-modal-close" id="info-modal-close" aria-label="Close">×</button>
+  <h2 id="info-modal-title">Information</h2>
+  <div class="info-modal-content" id="info-modal-content"></div>
+</div>
+
+<script>
+// ── Info Modal Logic ──
+(function() {
+  const overlay = document.getElementById('info-modal-overlay');
+  const modal   = document.getElementById('info-modal');
+  const closeBtn= document.getElementById('info-modal-close');
+  const titleEl = document.getElementById('info-modal-title');
+  const contentEl = document.getElementById('info-modal-content');
+
+  // Content Dictionary
+  const infoData = {
+    careers: {
+      title: "Careers at RoamCircle",
+      body: "<p>We're building the future of travel companionship. While we're currently a small, focused team, we're always looking for passionate riders, engineers, and community builders.</p><p>Send your resume and favorite ride story to <strong>careers@roamcircle.app</strong>.</p>"
+    },
+    ios: {
+      title: "iOS App",
+      body: "<p>The RoamCircle iOS app is currently in development.</p><p>Join our TestFlight beta to get early access to live tracking, offline maps, and push notifications for your crew.</p><p class='highlight'>Coming Q4 2026 to the App Store.</p>"
+    },
+    android: {
+      title: "Android App",
+      body: "<p>The RoamCircle Android app is currently in development.</p><p>Sign up for our newsletter to be notified when we launch on the Google Play Store.</p><p class='highlight'>Coming Q4 2026 to Google Play.</p>"
+    },
+    terms: {
+      title: "Terms & Conditions",
+      body: "<p><strong>1. Acceptance:</strong> By using RoamCircle, you agree to these terms.</p><p><strong>2. User Conduct:</strong> You agree to provide accurate information and treat other riders with respect.</p><p><strong>3. Liability:</strong> RoamCircle is a matching platform. We are not responsible for the actions of other users or incidents that occur during trips. Ride at your own risk.</p><p><strong>4. Payments:</strong> Deposits are processed via Razorpay. Refunds are subject to our cancellation policy.</p>"
+    },
+    privacy: {
+      title: "Privacy Policy",
+      body: "<p><strong>Data Collection:</strong> We collect your name, email, trip details, and location data (only when you choose to share it) to facilitate matching.</p><p><strong>Data Sharing:</strong> We do not sell your data. Your profile is only visible to users you match with or who are on your route.</p><p><strong>Cookies:</strong> We use essential cookies for authentication and session management.</p>"
+    },
+    safety: {
+      title: "Safety Tips for Riders",
+      body: "<ul><li><strong>Verify your crew:</strong> Always check reviews and verification badges before meeting up.</li><li><strong>Share your itinerary:</strong> Let a friend or family member know your route and expected arrival times.</li><li><strong>Carry essentials:</strong> First-aid kit, toolkit, spare tube, and emergency contacts.</li><li><strong>Trust your gut:</strong> If a match feels off, use the 'Leave Crew' button. No questions asked.</li><li><strong>Ride your own ride:</strong> Don't let peer pressure push you beyond your skill level or comfort zone.</li></ul>"
+    },
+    community: {
+      title: "Community Guidelines",
+      body: "<p>RoamCircle is built on mutual respect and a shared love for the road.</p><ul><li><strong>Be Honest:</strong> Accurate bios and trip details help everyone find the right match.</li><li><strong>Be Respectful:</strong> Harassment, discrimination, or abusive language will result in an immediate ban.</li><li><strong>Respect Boundaries:</strong> If someone declines your request or leaves the crew, respect their decision.</li><li><strong>Keep it Legal:</strong> Obey all local traffic laws and regulations.</li></ul>"
+    }
+  };
+
+  function openInfo(key) {
+    const data = infoData[key];
+    if (!data) return;
+    titleEl.textContent = data.title;
+    contentEl.innerHTML = data.body;
+    overlay.classList.add('active');
+    modal.classList.add('active');
+    document.body.style.overflow = 'hidden'; // Prevent background scrolling
+  }
+
+  function closeInfo() {
+    overlay.classList.remove('active');
+    modal.classList.remove('active');
+    document.body.style.overflow = '';
+  }
+
+  // Event Listeners
+  document.querySelectorAll('.footer-col a[data-info]').forEach(link => {
+    link.addEventListener('click', (e) => {
+      e.preventDefault();
+      openInfo(link.getAttribute('data-info'));
+    });
+  });
+
+  closeBtn.addEventListener('click', closeInfo);
+  overlay.addEventListener('click', closeInfo);
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && modal.classList.contains('active')) closeInfo();
+  });
+})();
+// 3. Highlight active section on scroll (works for BOTH top and bottom nav)
+const topItems = document.querySelectorAll('.topbar .nav a[href^="#"]');
+const bottomItems = document.querySelectorAll('.bottom-nav-item[href^="#"]');
+const allItems = [...topItems, ...bottomItems];
+const sections = ['my-trip', 'ai-planner', 'requests-section', 'matches-section'];
+
+function updateActiveNav() {
+  let current = '';
+  sections.forEach(id => {
+    const el = document.getElementById(id);
+    if (el && window.scrollY >= el.offsetTop - 150) current = id;
+  });
+  
+  allItems.forEach(item => {
+    const isActive = item.getAttribute('href') === '#' + current;
+    item.classList.toggle('active', isActive);
+  });
+}
+
+// Update on scroll and on hash change
+window.addEventListener('scroll', updateActiveNav, { passive: true });
+window.addEventListener('hashchange', updateActiveNav);
+// Initial call
+updateActiveNav();
+</script>
+
+<script>
+/* ── Trip card click → open full details drawer ── */
+(function () {
+  var card = document.getElementById('my-trip-card');
+  var drawer = document.querySelector('.trip-drawer') || document.getElementById('trip-drawer');
+  var overlay = document.querySelector('.trip-drawer-overlay');
+  if (!card || !drawer) return;
+
+  function openDrawer() {
+    fillDrawer();
+    drawer.classList.add('open');
+    if (overlay) overlay.classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeDrawer() {
+    drawer.classList.remove('open');
+    if (overlay) overlay.classList.remove('open');
+    document.body.style.overflow = '';
+  }
+  function txt(sel) {
+    var el = card.querySelector(sel);
+    return el ? el.textContent.trim() : '';
+  }
+
+  function fillDrawer() {
+    // Route hero (Mumbai → Ladakh)
+    var from = txt('.route-pill.from'), to = txt('.route-pill.to');
+    var hFrom = drawer.querySelector('.td-hero-city.from');
+    var hTo = drawer.querySelector('.td-hero-city.to');
+    if (hFrom && from) hFrom.textContent = from;
+    if (hTo && to) hTo.textContent = to;
+
+    // Meta pills (dates / type / vehicle)
+    var metas = [].map.call(card.querySelectorAll('.trip-card-meta span'), function (s) { return s.textContent.trim(); });
+
+    // Info rows — match by label
+    drawer.querySelectorAll('.td-row').forEach(function (row) {
+      var lbl = row.querySelector('.td-row-label');
+      var val = row.querySelector('.td-row-val');
+      if (!lbl || !val) return;
+      var l = lbl.textContent.toLowerCase();
+      if (l.indexOf('date') > -1 && metas[0]) val.textContent = metas[0];
+      else if (l.indexOf('type') > -1 && metas[1]) val.textContent = metas[1];
+      else if (l.indexOf('vehicle') > -1 && metas[2]) val.textContent = metas[2];
+      else if (l.indexOf('meet') > -1) {
+        var m = txt('.trip-card-meetpoints');
+        if (m) val.textContent = m.replace(/^meet-up points:\s*/i, '');
+      }
+    });
+
+    // Habits tags
+    var wrap = drawer.querySelector('.td-habits-tags');
+    var tags = card.querySelectorAll('.trip-card-habits .habit-tag');
+    if (wrap && tags.length) {
+      wrap.innerHTML = '';
+      tags.forEach(function (t) {
+        var s = document.createElement('span');
+        s.className = 'habit-tag';
+        s.textContent = t.textContent.trim();
+        wrap.appendChild(s);
+      });
+    }
+  }
+
+  // Open on click + keyboard
+  card.addEventListener('click', function (e) { e.preventDefault(); e.stopPropagation(); openDrawer(); });
+  card.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDrawer(); }
+  });
+
+  // Close: × button, overlay click, Escape
+  var closeBtn = drawer.querySelector('.td-close');
+  if (closeBtn) closeBtn.addEventListener('click', closeDrawer);
+  if (overlay) overlay.addEventListener('click', closeDrawer);
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeDrawer(); });
+})();
+</script>
 </body>
 </html>

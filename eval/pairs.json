@@ -1,0 +1,74 @@
+[
+  {
+    "a": "arjun",
+    "b": "priya",
+    "label": 1,
+    "why": "pace one step apart, both camp, non-smokers"
+  },
+  {
+    "a": "arjun",
+    "b": "rohan",
+    "label": 0,
+    "why": "pace clash; Rohan wants fast self-reliant riders"
+  },
+  {
+    "a": "arjun",
+    "b": "sara",
+    "label": 1,
+    "why": "same pace/budget/habits"
+  },
+  {
+    "a": "priya",
+    "b": "aman",
+    "label": 1,
+    "why": "relaxed, budget, camping, photography"
+  },
+  {
+    "a": "rohan",
+    "b": "kavya",
+    "label": 1,
+    "why": "fast+fast, guesthouses, experienced"
+  },
+  {
+    "a": "rohan",
+    "b": "aman",
+    "label": 0,
+    "why": "pace + budget + experience gap unsafe"
+  },
+  {
+    "a": "priya",
+    "b": "kavya",
+    "label": 0,
+    "why": "relaxed vs fast, camping vs guesthouse"
+  },
+  {
+    "a": "arjun",
+    "b": "aman",
+    "label": 0,
+    "why": "Arjun's lookingFor demands moderate pace"
+  },
+  {
+    "a": "priya",
+    "b": "sara",
+    "label": 1,
+    "why": "relaxed-moderate compatible, camping"
+  },
+  {
+    "a": "rohan",
+    "b": "sara",
+    "label": 0,
+    "why": "Rohan needs fast riders only"
+  },
+  {
+    "a": "kavya",
+    "b": "aman",
+    "label": 0,
+    "why": "opposite pace and budget"
+  },
+  {
+    "a": "kavya",
+    "b": "sara",
+    "label": 0,
+    "why": "fast vs moderate, no-camping vs camping"
+  }
+]

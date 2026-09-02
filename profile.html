@@ -264,6 +264,44 @@
         </button>
       </div>
 
+      <!-- Convoy Safety & Medical ID -->
+      <div class="profile-section">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+          <span style="font-size:1.2rem">🚨</span>
+          <h3 style="margin:0">Convoy Safety &amp; Medical ID</h3>
+        </div>
+        <p class="section-hint">Critical for group road trips &amp; high-altitude expeditions. Displayed to accepted crew members and used for 1-tap SOS broadcasts.</p>
+
+        <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:14px;margin-bottom:14px">
+          <div class="field">
+            <label style="display:block;color:var(--text-sub);font-size:0.75rem;font-weight:700;margin-bottom:4px">BLOOD GROUP</label>
+            <select id="blood-group" style="width:100%;padding:10px 12px;border-radius:10px;background:var(--surface-2);border:1px solid var(--line);color:var(--heading);font-weight:700">
+              <option value="O+">O+ (Universal Donor)</option>
+              <option value="O-">O-</option>
+              <option value="A+">A+</option>
+              <option value="A-">A-</option>
+              <option value="B+">B+</option>
+              <option value="B-">B-</option>
+              <option value="AB+">AB+</option>
+              <option value="AB-">AB-</option>
+            </select>
+          </div>
+          <div class="field">
+            <label style="display:block;color:var(--text-sub);font-size:0.75rem;font-weight:700;margin-bottom:4px">ICE CONTACT NAME</label>
+            <input type="text" id="ice-name" placeholder="e.g. Rahul Sharma" style="width:100%">
+          </div>
+          <div class="field">
+            <label style="display:block;color:var(--text-sub);font-size:0.75rem;font-weight:700;margin-bottom:4px">ICE PHONE (PHONE / WHATSAPP)</label>
+            <input type="tel" id="ice-phone" placeholder="e.g. +91 98765 43210" style="width:100%">
+          </div>
+        </div>
+
+        <div class="field">
+          <label style="display:block;color:var(--text-sub);font-size:0.75rem;font-weight:700;margin-bottom:4px">MEDICAL NOTES &amp; ALLERGIES</label>
+          <textarea id="medical-notes" rows="2" maxlength="300" placeholder="e.g. Asthmatic (inhaler in tank bag), Penicillin allergy, carry personal first-aid"></textarea>
+        </div>
+      </div>
+
     </div>
   </main>
 
@@ -290,6 +328,22 @@
       document.getElementById("bio").value           = p.bio         || "";
       document.getElementById("looking-for").value   = p.lookingFor  || "";
       document.getElementById("avatar-initial").textContent = (p.displayName || p.name || "?")[0].toUpperCase();
+
+      if (p.bloodGroup) document.getElementById("blood-group").value = p.bloodGroup;
+      if (p.emergencyContact?.name) document.getElementById("ice-name").value = p.emergencyContact.name;
+      if (p.emergencyContact?.phone) document.getElementById("ice-phone").value = p.emergencyContact.phone;
+      if (p.medicalNotes) document.getElementById("medical-notes").value = p.medicalNotes;
+
+      // Sync with localStorage for offline Safety Hub
+      try {
+        localStorage.setItem("rc_medical_id", JSON.stringify({
+          bloodGroup: p.bloodGroup || "O+",
+          iceName: p.emergencyContact?.name || "",
+          icePhone: p.emergencyContact?.phone || "",
+          iceRelation: p.emergencyContact?.relation || "Family",
+          medicalNotes: p.medicalNotes || ""
+        }));
+      } catch {}
 
       if (p.avatarUrl) {
         setAvatar(p.avatarUrl);
@@ -355,6 +409,10 @@
     document.getElementById("bio").addEventListener("input",         () => { updateCharCounts(); markDirty(); });
     document.getElementById("looking-for").addEventListener("input", () => { updateCharCounts(); markDirty(); });
     document.getElementById("display-name").addEventListener("input",() => markDirty());
+    document.getElementById("blood-group").addEventListener("change",() => markDirty());
+    document.getElementById("ice-name").addEventListener("input",   () => markDirty());
+    document.getElementById("ice-phone").addEventListener("input",  () => markDirty());
+    document.getElementById("medical-notes").addEventListener("input",() => markDirty());
 
     function markDirty() {
       if (!profileLoaded) return;
@@ -368,12 +426,35 @@
       const status = document.getElementById("save-status");
       btn.textContent = "Saving…"; btn.disabled = true;
 
+      const bloodGroup = document.getElementById("blood-group").value;
+      const iceName = document.getElementById("ice-name").value.trim();
+      const icePhone = document.getElementById("ice-phone").value.trim();
+      const medicalNotes = document.getElementById("medical-notes").value.trim();
+
       const payload = {
         displayName: document.getElementById("display-name").value.trim(),
         bio:         document.getElementById("bio").value.trim(),
         lookingFor:  document.getElementById("looking-for").value.trim(),
-        avatarUrl:   currentAvatarUrl
+        avatarUrl:   currentAvatarUrl,
+        bloodGroup:  bloodGroup,
+        emergencyContact: {
+          name: iceName,
+          phone: icePhone,
+          relation: "Family"
+        },
+        medicalNotes: medicalNotes
       };
+
+      // Save to localStorage
+      try {
+        localStorage.setItem("rc_medical_id", JSON.stringify({
+          bloodGroup,
+          iceName,
+          icePhone,
+          iceRelation: "Family",
+          medicalNotes
+        }));
+      } catch {}
 
       const res  = await fetch("/api/profile", {
         method:  "POST",

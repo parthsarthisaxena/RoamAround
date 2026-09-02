@@ -43,9 +43,6 @@
         <button class="button primary full" type="submit" id="submit-btn">Log in</button>
       </form>
       <p class="auth-note">New here? <a href="signup.html">Create an account</a></p>
-      <p class="auth-note" style="margin-top:8px;font-size:0.8rem;color:#727272">
-        Testing locally without MongoDB? <a href="dashboard.html" style="color:#1DB954">Go to dashboard directly →</a>
-      </p>
     </section>
   </main>
 
@@ -85,8 +82,6 @@
           return;
         }
 
-        // Store token for WebSocket auth, then redirect
-        if (data.token) sessionStorage.setItem("rc_ws_token", data.token);
         window.location.href = "/dashboard.html";
       } catch {
         errEl.textContent = "Network error — is the server running?";

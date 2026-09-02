@@ -1,0 +1,112 @@
+[
+  {
+    "id": "arjun",
+    "trip": {
+      "from": "Pune",
+      "to": "Ladakh",
+      "startDate": "2026-06-12",
+      "endDate": "2026-06-28",
+      "pace": "moderate",
+      "budget": "mid",
+      "habits": "early starter carries toolkit camping dhaba non-smoker"
+    },
+    "bio": "6 years long-distance. Spiti twice, Ladakh once. Cruise 85-95 km/h, 5am starts, full toolkit.",
+    "lookingFor": "Moderate-paced reliable riders, fine with guesthouses or wild camping, early mornings.",
+    "rating": {
+      "average": 4.7,
+      "count": 9,
+      "snippets": [
+        "Reliable on mountain roads — always waited at major stops.",
+        "Never pushed pace when someone was tired."
+      ]
+    }
+  },
+  {
+    "id": "priya",
+    "trip": {
+      "from": "Nashik",
+      "to": "Ladakh",
+      "startDate": "2026-06-15",
+      "endDate": "2026-06-30",
+      "pace": "relaxed",
+      "budget": "mid",
+      "habits": "photographer camping solo basic mechanic non-smoker"
+    },
+    "bio": "Solo rider + travel photographer, Classic 350. 70-80 km/h, frequent photo stops, first-aid kit.",
+    "lookingFor": "Patience with photo stops, relaxed pace, comfortable camping.",
+    "rating": {
+      "average": 4.5,
+      "count": 6,
+      "snippets": [
+        "Patient with photo stops and never rushed the group."
+      ]
+    }
+  },
+  {
+    "id": "rohan",
+    "trip": {
+      "from": "Delhi",
+      "to": "Ladakh",
+      "startDate": "2026-06-10",
+      "endDate": "2026-06-22",
+      "pace": "fast",
+      "budget": "mid",
+      "habits": "fast rider guesthouses expert mechanic satellite phone"
+    },
+    "bio": "11 long rides, 100-110 km/h, 350-450 km days. Expert mechanic, satellite phone.",
+    "lookingFor": "Self-reliant fast riders with mountain experience, know basic maintenance.",
+    "rating": {
+      "average": 4.8,
+      "count": 14,
+      "snippets": [
+        "Fast but disciplined — always regrouped at agreed points.",
+        "Match his pace only if comfortable with 400+ km days."
+      ]
+    }
+  },
+  {
+    "id": "kavya",
+    "trip": {
+      "from": "Chandigarh",
+      "to": "Ladakh",
+      "startDate": "2026-06-11",
+      "endDate": "2026-06-25",
+      "pace": "fast",
+      "budget": "comfort",
+      "habits": "guesthouses early starter mechanic non-smoker"
+    },
+    "bio": "Fast tourer, 300+ km days, guesthouses only, done Leh-Srinagar twice.",
+    "lookingFor": "Experienced fast riders, no camping.",
+    "rating": null
+  },
+  {
+    "id": "aman",
+    "trip": {
+      "from": "Jaipur",
+      "to": "Ladakh",
+      "startDate": "2026-06-14",
+      "endDate": "2026-06-30",
+      "pace": "relaxed",
+      "budget": "budget",
+      "habits": "camping slow travel photography non-smoker"
+    },
+    "bio": "First Ladakh, budget camper, happy with 150 km days and long chai breaks.",
+    "lookingFor": "Patient riders, camping-friendly, no rush.",
+    "rating": null
+  },
+  {
+    "id": "sara",
+    "trip": {
+      "from": "Pune",
+      "to": "Ladakh",
+      "startDate": "2026-06-12",
+      "endDate": "2026-06-26",
+      "pace": "moderate",
+      "budget": "mid",
+      "habits": "early starter dhaba camping toolkit non-smoker"
+    },
+    "bio": "Moderate rider, 250 km days, dhaba food, carry spare levers.",
+    "lookingFor": "Same pace, early starts, camping okay.",
+    "rating": null
+  }
+]
