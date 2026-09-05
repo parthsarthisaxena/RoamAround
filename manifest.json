@@ -1,6 +1,6 @@
 {
-  "name": "RoamCircle — Find Your Ride Crew",
-  "short_name": "RoamCircle",
+  "name": "RoamAround — Find Your Ride Crew",
+  "short_name": "RoamAround",
   "description": "Publish your trip, get matched by route, pace and habits, and ride together.",
   "start_url": "/dashboard.html",
   "display": "standalone",

@@ -1,4 +1,4 @@
-/* ─── RoamCircle — AI route planner ─────────────────────────
+/* ─── RoamAround — AI route planner ─────────────────────────
  * Handles the dedicated AI planner form (#planner-form)
  * Trip publishing (#trip-form) is handled by chat.js
  ─────────────────────────────────────────────────────────── */

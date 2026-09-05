@@ -1,4 +1,4 @@
-/* ─── RoamCircle sw.js — Mountain Offline Service Worker ─────────────
+/* ─── RoamAround sw.js — Mountain Offline Service Worker ─────────────
  * Offline caching for remote overland zones (Leh/Spiti/Western Ghats).
  ───────────────────────────────────────────────────────────────── */
 

@@ -1,4 +1,4 @@
-# RoamCircle
+# RoamAround
 
 **Find compatible travel partners for motorcycle rides, road trips, hikes and more.**
 

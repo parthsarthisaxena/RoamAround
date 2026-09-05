@@ -1,4 +1,4 @@
-/* ─── RoamCircle map.js — Interactive Route & Convoy Waypoints Map ───
+/* ─── RoamAround map.js — Interactive Route & Convoy Waypoints Map ───
  * Lightweight Leaflet-based map component.
  * Features:
  *  - Auto tile theme switching (CartoDB Dark Matter & Positron)
@@ -328,7 +328,7 @@
 
   // Standard GPX XML file generator
   async function exportGpx(tripTitle, waypoints) {
-    const safeTitle = (tripTitle || "RoamCircle_Route").replace(/[^a-zA-Z0-9_-]/g, "_");
+    const safeTitle = (tripTitle || "RoamAround_Route").replace(/[^a-zA-Z0-9_-]/g, "_");
     const resolved = [];
 
     for (const wp of waypoints) {
@@ -340,10 +340,10 @@
     if (!resolved.length) return;
 
     let gpx = `<?xml version="1.0" encoding="UTF-8"?>
-<gpx version="1.1" creator="RoamCircle - https://roamcircle.app" xmlns="http://www.topografix.com/GPX/1/1">
+<gpx version="1.1" creator="RoamAround - https://roamaround.app" xmlns="http://www.topografix.com/GPX/1/1">
   <metadata>
     <name>${safeTitle}</name>
-    <desc>RoamCircle Convoy Route Plan</desc>
+    <desc>RoamAround Convoy Route Plan</desc>
     <time>${new Date().toISOString()}</time>
   </metadata>
   <trk>

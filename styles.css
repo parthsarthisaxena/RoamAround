@@ -1688,7 +1688,7 @@ img { max-width: 100%; height: auto; }
   h2 { font-size: 1.4rem; }
 
   .topbar { padding: 10px 12px; gap: 8px; }
-  .brand span:last-child { display: none; } /* hide "RoamCircle" text, keep logo */
+  .brand span:last-child { display: none; } /* hide "RoamAround" text, keep logo */
 
   .hero-content { margin: 0 12px 32px; }
 

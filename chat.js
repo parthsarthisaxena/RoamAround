@@ -1,4 +1,4 @@
-/* ─── RoamCircle chat.js — Step 3 (all issues fixed) ────────
+/* ─── RoamAround chat.js — Step 3 (all issues fixed) ────────
  *
  * Fix #2  rebuildMatchesGrid — shows real accepted users, not just demo
  * Fix #3  openChat — works for both demo and real users
@@ -2019,10 +2019,10 @@ function wireTripCard() {
   document.getElementById("td-share-btn")?.addEventListener("click", async () => {
     const trip = _currentTrip;
     if (!trip) return;
-    const text = `My trip: ${trip.from || "?"} → ${trip.to || "?"} on RoamCircle 🏍️`;
+    const text = `My trip: ${trip.from || "?"} → ${trip.to || "?"} on RoamAround 🏍️`;
     try {
       if (navigator.share) {
-        await navigator.share({ title: "My RoamCircle Trip", text });
+        await navigator.share({ title: "My RoamAround Trip", text });
       } else {
         await navigator.clipboard.writeText(text);
         const btn = document.getElementById("td-share-btn");

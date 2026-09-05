@@ -1,4 +1,4 @@
-/* ─── RoamCircle animate.js — scroll reveal + micro-interactions ─
+/* ─── RoamAround animate.js — scroll reveal + micro-interactions ─
  * Loads on every page. Handles:
  *  - Intersection Observer scroll reveals
  *  - Nav badge bump on count change

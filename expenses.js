@@ -1,4 +1,4 @@
-/* ─── RoamCircle expenses.js — In-Chat Crew Expense Splitter & Fuel Calculator ───
+/* ─── RoamAround expenses.js — In-Chat Crew Expense Splitter & Fuel Calculator ───
  * Modular expense calculator and modal manager for shared road trip costs.
  ───────────────────────────────────────────────────────────────────────────── */
 

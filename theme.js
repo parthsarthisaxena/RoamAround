@@ -1,4 +1,4 @@
-/* RoamCircle — light / dark theme toggle */
+/* RoamAround — light / dark theme toggle */
 (function () {
   "use strict";
 

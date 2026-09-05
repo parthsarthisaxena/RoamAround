@@ -1,4 +1,4 @@
-/* ─── RoamCircle pwa.js — PWA & Mountain Offline Controller ─────────
+/* ─── RoamAround pwa.js — PWA & Mountain Offline Controller ─────────
  * Manages Service Worker lifecycle, offline mountain zone detection,
  * local trip itinerary caching, and 1-tap app installation.
  ───────────────────────────────────────────────────────────────── */
@@ -116,7 +116,7 @@
 
     installBtn?.addEventListener("click", async () => {
       if (!deferredInstallPrompt) {
-        alert("To install RoamCircle:\n• Chrome/Android: Tap menu (⋮) → 'Install app'\n• Safari/iOS: Tap Share (⎋) → 'Add to Home Screen'");
+        alert("To install RoamAround:\n• Chrome/Android: Tap menu (⋮) → 'Install app'\n• Safari/iOS: Tap Share (⎋) → 'Add to Home Screen'");
         return;
       }
 
@@ -130,7 +130,7 @@
     });
 
     window.addEventListener("appinstalled", () => {
-      console.log("[pwa] RoamCircle PWA installed successfully");
+      console.log("[pwa] RoamAround PWA installed successfully");
       if (installBtn) installBtn.style.display = "none";
       deferredInstallPrompt = null;
     });

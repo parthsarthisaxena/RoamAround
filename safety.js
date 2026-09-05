@@ -1,4 +1,4 @@
-/* ─── RoamCircle safety.js — Convoy Safety Hub & Rider SOS Beacon ───
+/* ─── RoamAround safety.js — Convoy Safety Hub & Rider SOS Beacon ───
  * Real-time location check-ins, emergency hotlines, medical ID,
  * and high-altitude / remote route safety checklists.
  ───────────────────────────────────────────────────────────────── */

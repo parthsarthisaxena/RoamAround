@@ -1,4 +1,4 @@
-/* RoamCircle — AI Trip Treasurer: Razorpay TEST mode, mock fallback when keys absent */
+/* RoamAround — AI Trip Treasurer: Razorpay TEST mode, mock fallback when keys absent */
 "use strict";
 const crypto = require("crypto");
 let _db = null, _push = null;
@@ -37,7 +37,7 @@ async function tryInit(myId, requesterId) {
     let url;
     if (enabled()) {
       const pl = await rzp("payment_links", { amount: AMOUNT * 100, currency: "INR",
-        description: "RoamCircle good-faith trip deposit", reference_id: `${threadId}_${uid}` });
+        description: "RoamAround good-faith trip deposit", reference_id: `${threadId}_${uid}` });
       url = pl.short_url;
     } else {
       url = `/mock-pay.html?ref=${threadId}_${uid}`;   // mock mode — no Razorpay account needed

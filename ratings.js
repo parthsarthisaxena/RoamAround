@@ -1,4 +1,4 @@
-/* RoamCircle — rider ratings & review comments */
+/* RoamAround — rider ratings & review comments */
 (function () {
   "use strict";
 

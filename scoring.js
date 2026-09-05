@@ -1,4 +1,4 @@
-/* RoamCircle — deterministic compatibility scorer (extracted from server.js) */
+/* RoamAround — deterministic compatibility scorer (extracted from server.js) */
 "use strict";
 const PACE_RANK   = { relaxed: 0, moderate: 1, fast: 2 };
 const BUDGET_RANK = { budget: 0, mid: 1, comfort: 2 };

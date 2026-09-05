@@ -1,4 +1,4 @@
-/* ─── RoamCircle media.js — Voice Notes & Road Photos Engine ────────
+/* ─── RoamAround media.js — Voice Notes & Road Photos Engine ────────
  * Handles audio memo recording (MediaRecorder API + fallback synthesis),
  * in-chat voice playback, photo compression, and full-screen lightbox.
  ───────────────────────────────────────────────────────────────── */

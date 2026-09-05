@@ -1,5 +1,5 @@
 /**
- * RoamCircle server.js — fully hardened (Render + Vercel split deploy)
+ * RoamAround server.js — fully hardened (Render + Vercel split deploy)
  * Fixes: removed broken express/cors/session/import.meta block (this is a plain
  * node:http server — CORS is handled by setCORS + CORS_ORIGINS env var),
  * single PORT declaration, cross-site cookies for Vercel → Render login.
@@ -53,12 +53,12 @@ async function sendResetEmail(toEmail, name, code) {
     <body style="margin:0;padding:24px;background-color:#0f172a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
       <div style="max-width:540px;margin:0 auto;background:#181818;border:1px solid rgba(255,255,255,0.1);border-radius:16px;overflow:hidden;color:#ffffff;">
         <div style="background:#10181c;padding:24px;text-align:center;border-bottom:1px solid rgba(255,255,255,0.08);">
-          <span style="font-size:24px;font-weight:800;color:#1a9e4a;letter-spacing:-0.5px;">RoamCircle</span>
+          <span style="font-size:24px;font-weight:800;color:#1a9e4a;letter-spacing:-0.5px;">RoamAround</span>
         </div>
         <div style="padding:32px 28px;">
           <h2 style="margin:0 0 12px;color:#ffffff;font-size:20px;font-weight:700;">Reset your password</h2>
           <p style="color:#b3b3b3;line-height:1.6;font-size:15px;margin:0 0 20px;">Hello${name ? ' ' + name : ''},</p>
-          <p style="color:#b3b3b3;line-height:1.6;font-size:15px;margin:0 0 24px;">You requested a password reset for your RoamCircle account. Use the 6-digit verification code below to set a new password:</p>
+          <p style="color:#b3b3b3;line-height:1.6;font-size:15px;margin:0 0 24px;">You requested a password reset for your RoamAround account. Use the 6-digit verification code below to set a new password:</p>
           <div style="text-align:center;margin:28px 0;">
             <div style="display:inline-block;padding:14px 32px;background:#242424;border:2px solid #1a9e4a;border-radius:12px;font-size:32px;font-weight:800;letter-spacing:6px;color:#22b359;">
               ${code}
@@ -66,7 +66,7 @@ async function sendResetEmail(toEmail, name, code) {
           </div>
           <p style="color:#b3b3b3;line-height:1.6;font-size:14px;margin:24px 0 0;">This code is valid for <strong>15 minutes</strong>. If you didn't request this code, you can safely disregard this email.</p>
           <hr style="border:none;border-top:1px solid rgba(255,255,255,0.08);margin:28px 0 18px;">
-          <p style="color:#727272;font-size:12px;margin:0;text-align:center;">Safe travels,<br>The RoamCircle Team</p>
+          <p style="color:#727272;font-size:12px;margin:0;text-align:center;">Safe travels,<br>The RoamAround Team</p>
         </div>
       </div>
     </body>
@@ -76,7 +76,7 @@ async function sendResetEmail(toEmail, name, code) {
   // 1. Resend API (if RESEND_API_KEY is configured in env)
   if (process.env.RESEND_API_KEY) {
     try {
-      const fromAddr = process.env.EMAIL_FROM || "RoamCircle <onboarding@resend.dev>";
+      const fromAddr = process.env.EMAIL_FROM || "RoamAround <onboarding@resend.dev>";
       const resp = await fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: {
@@ -86,7 +86,7 @@ async function sendResetEmail(toEmail, name, code) {
         body: JSON.stringify({
           from: fromAddr,
           to: [toEmail],
-          subject: `Your RoamCircle Verification Code: ${code}`,
+          subject: `Your RoamAround Verification Code: ${code}`,
           html
         })
       });
@@ -106,12 +106,12 @@ async function sendResetEmail(toEmail, name, code) {
   const transporter = getMailTransporter();
   if (transporter) {
     try {
-      const from = process.env.EMAIL_FROM || (process.env.EMAIL_USER ? `"RoamCircle" <${process.env.EMAIL_USER}>` : process.env.SMTP_USER || '"RoamCircle" <noreply@roamcircle.com>');
+      const from = process.env.EMAIL_FROM || (process.env.EMAIL_USER ? `"RoamAround" <${process.env.EMAIL_USER}>` : process.env.SMTP_USER || '"RoamAround" <noreply@roamaround.com>');
       await transporter.sendMail({
         from,
         to: toEmail,
-        subject: `Your RoamCircle Verification Code: ${code}`,
-        text: `Your RoamCircle password reset code is: ${code}. This code is valid for 15 minutes.`,
+        subject: `Your RoamAround Verification Code: ${code}`,
+        text: `Your RoamAround password reset code is: ${code}. This code is valid for 15 minutes.`,
         html
       });
       console.log(`[email:smtp] Verification email sent to ${toEmail}`);
@@ -142,7 +142,7 @@ if (!JWT_SECRET || JWT_SECRET.length < 32 || WEAK_JWT.test(JWT_SECRET)) {
   process.exit(1);
 }
 const TRUST_PROXY = /^(1|true|yes)$/i.test(process.env.TRUST_PROXY || "");
-const DB_NAME     = "roamcircle";
+const DB_NAME     = "roamaround";
 const PUBLIC_DIR  = __dirname;
 const SALT_ROUNDS = 12;
 const JWT_TTL     = "7d";
@@ -1248,7 +1248,7 @@ async function main() {
   const server = http.createServer(router);
   setupWebSocket(server);
   server.listen(PORT, () => {
-    console.log(`\nRoamCircle → http://localhost:${PORT}`);
+    console.log(`\nRoamAround → http://localhost:${PORT}`);
     console.log(`WebSocket → ws://localhost:${PORT}/ws`);
     console.log(`MongoDB: ${redactMongoUri(MONGODB_URI)}`);
     console.log(`JWT: ✓ custom`);

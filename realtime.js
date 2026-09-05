@@ -1,4 +1,4 @@
-/* ─── RoamCircle realtime.js — Step 4 (all bugs fixed) ───────
+/* ─── RoamAround realtime.js — Step 4 (all bugs fixed) ───────
  *
  * Fix #1  const in switch case → wrapped in block {}
  * Fix #2  reconnect loop when no token → guard added
@@ -245,7 +245,7 @@
     // Browser notification
     if (Notification.permission === "granted") {
       try {
-        new Notification(`RoamCircle — ${n.title}`, { body: n.body });
+        new Notification(`RoamAround — ${n.title}`, { body: n.body });
       } catch { /* some browsers block it */ }
     }
   }
