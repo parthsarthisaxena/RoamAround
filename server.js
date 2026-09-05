@@ -12,6 +12,16 @@
  */
 // A. Use Render's port
 const PORT = process.env.PORT || 3000;
+const cors = require('cors');
+
+app.use(cors({
+  origin: [
+    'https://roamaround-ivory.vercel.app/',   // ← your actual Vercel URL
+    'http://localhost:3000'                  // keep for local dev
+  ],
+  credentials: true                          // REQUIRED for login cookies
+}));
+
 const API_URL = import.meta.env.VITE_API_URL;
 
 fetch(`${API_URL}/api/users`);
