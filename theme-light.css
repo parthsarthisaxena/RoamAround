@@ -76,7 +76,10 @@
 }
 
 [data-theme="light"] .page-home .hero-insights strong {
-  color: var(--green-dim);
+  color: #ffffff;
+}
+[data-theme="light"] .page-home .hero-insights span {
+  color: rgba(255, 255, 255, 0.9);
 }
 
 [data-theme="light"] .page-home .overview {
