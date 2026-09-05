@@ -18,6 +18,7 @@ const API_BASE = 'https://roamaround-xbpv.onrender.com'; // ← NO trailing slas
 const WS_BASE  = API_BASE.replace('https://', 'wss://'); // ← ADDED
  // ← your REAL Render URL, no trailing slash
 /* fetch */
+/* fetch */
 const _fetch = window.fetch.bind(window);
 window.fetch = (url, opts = {}) => {
   if (typeof url === 'string' && url.startsWith('/')) {
