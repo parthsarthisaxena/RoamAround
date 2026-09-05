@@ -1483,14 +1483,15 @@ if (tripTypeSelect && previewCard) {
   });
 
   // Close logic
-  function closeInfoModal() {
-    document.getElementById('info-modal-overlay').classList.remove('open');
-    document.getElementById('info-modal').classList.remove('open');
-    document.body.style.overflow = '';
-  }
-  document.getElementById('info-modal-close').addEventListener('click', closeInfoModal);
-  document.getElementById('info-modal-overlay').addEventListener('click', closeInfoModal);
-  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeInfoModal(); });
+function closeInfoModal() {
+  document.getElementById('info-modal-overlay')?.classList.remove('open');
+  document.getElementById('info-modal')?.classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+document.getElementById('info-modal-close')?.addEventListener('click', closeInfoModal);
+document.getElementById('info-modal-overlay')?.addEventListener('click', closeInfoModal); // Added ?. here
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeInfoModal(); });
 })();
 </script>
 <!-- ── Footer ── -->
