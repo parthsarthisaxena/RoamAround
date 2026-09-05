@@ -11,7 +11,6 @@
  *  #11 engines field added to package.json
  */
 // A. Use Render's port
-const PORT = process.env.PORT || 3000;
 const cors = require('cors');
 
 app.use(cors({
@@ -54,9 +53,10 @@ const { WebSocketServer, WebSocket } = require("ws");
 const { scoreCompatibility } = require("./scoring.js");
 const { rankWithAI }         = require("./ai_matcher.js");
 const deposits               = require("./deposits.js");
-// ── Config ───────────────────────────────────────────────────
-//const PORT        = Number(process.env.PORT        || 3000);
-const MONGODB_URI = process.env.MONGODB_URI        || "mongodb://127.0.0.1:27017";
+
+// ── Config ──────────────────────────────────────────────
+const PORT        = Number(process.env.PORT || 3000);   // ← make sure this line is NOT commented
+const MONGODB_URI = process.env.MONGODB_URI || "mongodb://127.0.0.1:27017";
 const JWT_SECRET  = String(process.env.JWT_SECRET || "").trim();
 const GEMINI_KEY  = process.env.GEMINI_API_KEY      || "";
 const GEMINI_MODEL = process.env.GEMINI_MODEL        || "gemini-2.0-flash";
@@ -302,23 +302,23 @@ function requireUser(req, res) {
   return u;
 }
 
+const IS_PROD = process.env.NODE_ENV === "production";
 function makeAuthCookie(token) {
   return cookieLib.serialize("rc_token", token, {
     httpOnly: true,
-    sameSite: "lax",
+    sameSite: IS_PROD ? "none" : "lax",
     maxAge:   60 * 60 * 24 * 7,
     path:     "/",
-    secure:   process.env.NODE_ENV === "production"
+    secure:   IS_PROD
   });
 }
-
 function clearAuthCookie() {
   return cookieLib.serialize("rc_token", "", {
     httpOnly: true,
-    sameSite: "lax",
+    sameSite: IS_PROD ? "none" : "lax",
     maxAge:   0,
     path:     "/",
-    secure:   process.env.NODE_ENV === "production"
+    secure:   IS_PROD
   });
 }
 
