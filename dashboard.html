@@ -45,25 +45,27 @@
 </style>
 <script>
 /* ── Render backend bridge ── */
-const API_BASE = 'https://roamaround-xbpv.onrender.com/'; // ← no trailing slash
-const WS_BASE  = API_BASE.replace('https://', 'wss://');
+  /* ── API Bridge: Send requests to Render, not Vercel ── */
+  const API_BASE = 'https://roamaround-xbpv.onrender.com'; // ABSOLUTELY NO TRAILING SLASH
+  const WS_BASE  = API_BASE.replace('https://', 'wss://');
 
-/* 1. Rewrite fetch('/api/...') → Render */
-const _fetch = window.fetch.bind(window);
-window.fetch = (url, opts = {}) => {
-  if (typeof url === 'string' && url.startsWith('/')) {
-    url = API_BASE + url;
-    opts.credentials = opts.credentials || 'include';
-  }
-  return _fetch(url, opts);
-};
+  const _fetch = window.fetch.bind(window);
+  window.fetch = function(url, opts) {
+    opts = opts || {};
+    if (typeof url === 'string' && url.startsWith('/')) {
+      // Force remove any trailing slashes from API_BASE to prevent //api/...
+      url = API_BASE.replace(/\/+$/, '') + url; 
+      opts.credentials = 'include';
+    }
+    return _fetch(url, opts);
+  };
 
-/* 2. Rewrite XMLHttpRequest too (in case signup uses XHR) */
-const _xhrOpen = XMLHttpRequest.prototype.open;
-XMLHttpRequest.prototype.open = function (method, url, ...rest) {
-  if (typeof url === 'string' && url.startsWith('/')) url = API_BASE + url;
-  return _xhrOpen.call(this, method, url, ...rest);
-};
+  /* XMLHttpRequest override */
+  const _xhrOpen = XMLHttpRequest.prototype.open;
+  XMLHttpRequest.prototype.open = function (method, url, ...rest) {
+    if (typeof url === 'string' && url.startsWith('/')) url = API_BASE.replace(/\/+$/, '') + url;
+    return _xhrOpen.call(this, method, url, ...rest);
+  };
 
 /* 3. Rewrite plain <form action="/api/..."> too */
 document.addEventListener('DOMContentLoaded', () => {

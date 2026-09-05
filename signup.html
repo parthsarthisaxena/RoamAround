@@ -13,17 +13,26 @@
   <link rel="stylesheet" href="theme-light.css">
   <script>
   /* ── API Bridge: Send requests to Render, not Vercel ── */
-  const API_BASE = 'https://roamaround-xbpv.onrender.com'; // NO trailing slash!
+  /* ── API Bridge: Send requests to Render, not Vercel ── */
+  const API_BASE = 'https://roamaround-xbpv.onrender.com'; // ABSOLUTELY NO TRAILING SLASH
   const WS_BASE  = API_BASE.replace('https://', 'wss://');
 
   const _fetch = window.fetch.bind(window);
   window.fetch = function(url, opts) {
     opts = opts || {};
     if (typeof url === 'string' && url.startsWith('/')) {
-      url = API_BASE + url;
-      opts.credentials = 'include'; // Required for cookies
+      // Force remove any trailing slashes from API_BASE to prevent //api/...
+      url = API_BASE.replace(/\/+$/, '') + url; 
+      opts.credentials = 'include';
     }
     return _fetch(url, opts);
+  };
+
+  /* XMLHttpRequest override */
+  const _xhrOpen = XMLHttpRequest.prototype.open;
+  XMLHttpRequest.prototype.open = function (method, url, ...rest) {
+    if (typeof url === 'string' && url.startsWith('/')) url = API_BASE.replace(/\/+$/, '') + url;
+    return _xhrOpen.call(this, method, url, ...rest);
   };
 </script>
 </head>

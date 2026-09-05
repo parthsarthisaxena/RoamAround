@@ -1054,7 +1054,8 @@ function router(req, res) {
   if (method === "POST" && urlPath === "/api/mock/pay")         return handleMockPay(req, res);
   if (method === "POST" && urlPath === "/api/razorpay/webhook") return handleRazorpayWebhook(req, res);
   if (method === "GET" || method === "HEAD") return handleStatic(req, res);
-  res.writeHead(405); res.end("Method not allowed");
+setCORS(res, req);
+res.writeHead(405); res.end("Method not allowed");
 }
 
 // ═══ BOOT ═══
