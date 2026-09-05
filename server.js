@@ -330,9 +330,17 @@ const handleSignup = dbRoute(async (req, res) => {
   if (!email || !email.includes("@")) return sendJson(res, 400, { error: "Valid email is required." }, req);
   if (password.length < 8)            return sendJson(res, 400, { error: "Password must be at least 8 characters." }, req);
   const hash   = await bcrypt.hash(password, SALT_ROUNDS);
-  const result = await db.collection("users").insertOne({
+ let result;
+try {
+  result = await db.collection("users").insertOne({
     name, email, password: hash, tripType, gender, createdAt: new Date()
   });
+} catch (e) {
+  if (e.code === 11000) {
+    return sendJson(res, 409, { error: "An account with this email already exists. Please log in." }, req);
+  }
+  throw e;
+}
   const token = jwt.sign(
     { userId: result.insertedId.toString(), name, email, tripType },
     JWT_SECRET, { expiresIn: JWT_TTL }
