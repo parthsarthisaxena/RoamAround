@@ -7,7 +7,7 @@
     "npm": ">=9.0.0"
   },
   "scripts": {
-    "start": "node server.js",
+    "start": "node server.cjs",
     "dev": "node --watch server.js",
     "eval": "node -r dotenv/config eval/run_eval.js"
   },
