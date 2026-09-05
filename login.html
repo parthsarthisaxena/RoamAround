@@ -14,7 +14,9 @@
   
   <script>
 /* ── Connect Vercel frontend → Render backend ── */
-const API_BASE = 'https://roamaround-xbpv.onrender.com/'; // ← your REAL Render URL, no trailing slash
+const API_BASE = 'https://roamaround-xbpv.onrender.com'; // ← NO trailing slash
+const WS_BASE  = API_BASE.replace('https://', 'wss://'); // ← ADDED
+ // ← your REAL Render URL, no trailing slash
 /* fetch */
 const _fetch = window.fetch.bind(window);
 window.fetch = (url, opts = {}) => {
