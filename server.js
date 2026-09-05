@@ -382,6 +382,60 @@ const handleLogin = dbRoute(async (req, res) => {
   });
   res.end(JSON.stringify({ ok: true, userId: user._id.toString() }));
 });
+const handleForgotPassword = dbRoute(async (req, res) => {
+  if (!rateLimit(req, res, 5, 15 * 60_000)) return;
+  const body  = await readBody(req);
+  const email = String(body.email || "").trim().toLowerCase();
+  if (!email || !email.includes("@")) {
+    return sendJson(res, 400, { error: "Valid email is required." }, req);
+  }
+  const user = await db.collection("users").findOne({ email });
+  if (!user) {
+    return sendJson(res, 200, { ok: true, message: "If an account exists with that email, a reset code has been sent." }, req);
+  }
+  const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
+  const resetExpiry = new Date(Date.now() + 15 * 60_000);
+  await db.collection("users").updateOne(
+    { _id: user._id },
+    { $set: { resetCode, resetExpiry } }
+  );
+  console.log(`[auth] Password reset code for ${email}: ${resetCode}`);
+  sendJson(res, 200, { 
+    ok: true, 
+    message: "Reset code sent to your email.",
+    demoCode: resetCode 
+  }, req);
+});
+const handleResetPassword = dbRoute(async (req, res) => {
+  if (!rateLimit(req, res, 5, 15 * 60_000)) return;
+  const body        = await readBody(req);
+  const email       = String(body.email || "").trim().toLowerCase();
+  const code        = String(body.code || "").trim();
+  const newPassword = String(body.newPassword || "");
+
+  if (!email || !code || !newPassword) {
+    return sendJson(res, 400, { error: "Email, reset code, and new password are required." }, req);
+  }
+  if (newPassword.length < 8) {
+    return sendJson(res, 400, { error: "Password must be at least 8 characters." }, req);
+  }
+
+  const user = await db.collection("users").findOne({ email });
+  if (!user || !user.resetCode || user.resetCode !== code) {
+    return sendJson(res, 400, { error: "Invalid or expired reset code." }, req);
+  }
+  if (user.resetExpiry && new Date(user.resetExpiry) < new Date()) {
+    return sendJson(res, 400, { error: "Reset code has expired. Please request a new one." }, req);
+  }
+
+  const hash = await bcrypt.hash(newPassword, SALT_ROUNDS);
+  await db.collection("users").updateOne(
+    { _id: user._id },
+    { $set: { password: hash }, $unset: { resetCode: "", resetExpiry: "" } }
+  );
+  console.log(`[auth] Password successfully reset for ${email}`);
+  sendJson(res, 200, { ok: true, message: "Password updated successfully. You can now log in." }, req);
+});
 function handleLogout(req, res) {
   setCORS(res, req);
   res.writeHead(200, {
@@ -1014,9 +1068,11 @@ function router(req, res) {
   const { method, url } = req;
   const urlPath = url.split("?")[0];
   if (method === "OPTIONS") { setCORS(res, req); res.writeHead(204); res.end(); return; }
-  if (method === "POST" && urlPath === "/api/auth/signup")  return wrappedSignup(req, res);
-  if (method === "POST" && urlPath === "/api/auth/login")   return handleLogin(req, res);
-  if (method === "POST" && urlPath === "/api/auth/logout")  return handleLogout(req, res);
+  if (method === "POST" && urlPath === "/api/auth/signup")          return wrappedSignup(req, res);
+  if (method === "POST" && urlPath === "/api/auth/login")           return handleLogin(req, res);
+  if (method === "POST" && urlPath === "/api/auth/forgot-password") return handleForgotPassword(req, res);
+  if (method === "POST" && urlPath === "/api/auth/reset-password")  return handleResetPassword(req, res);
+  if (method === "POST" && urlPath === "/api/auth/logout")          return handleLogout(req, res);
   if (method === "GET"  && urlPath === "/api/auth/logout")  return handleLogoutGet(req, res);
   if (method === "GET"  && urlPath === "/api/auth/me")      return handleMe(req, res);
   if (method === "GET"  && urlPath === "/api/auth/token")   return handleAuthToken(req, res);

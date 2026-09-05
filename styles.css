@@ -1111,6 +1111,74 @@ textarea { min-height: 100px; resize: vertical; }
 .auth-note a { color: var(--green); font-weight: 800; }
 .auth-note a:hover { color: var(--green-bright); text-decoration: underline; }
 
+.forgot-link {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--green);
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: none;
+  transition: color 0.15s, transform 0.15s;
+  display: inline-block;
+}
+.forgot-link:hover {
+  color: var(--green-bright);
+  text-decoration: underline;
+}
+
+/* ─── Forgot Password Modal ─────────────────────────────── */
+.rc-forgot-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: var(--overlay);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+.rc-forgot-overlay.is-open {
+  display: flex;
+  opacity: 1;
+}
+.rc-forgot-modal {
+  background: var(--surface-1);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xl);
+  max-width: 440px;
+  width: 100%;
+  padding: 28px;
+  position: relative;
+  transform: scale(0.95) translateY(10px);
+  transition: transform 0.25s var(--ease-spring);
+}
+.rc-forgot-overlay.is-open .rc-forgot-modal {
+  transform: scale(1) translateY(0);
+}
+.rc-forgot-close {
+  background: var(--surface-2);
+  border: none;
+  color: var(--heading);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 1.2rem;
+  display: grid;
+  place-items: center;
+  transition: background 0.15s;
+}
+.rc-forgot-close:hover {
+  background: var(--surface-3);
+}
+
 /* ─── Profile pages ──────────────────────────────────────── */
 .profile-page { max-width: 880px; margin: 0 auto; padding: 0 0 80px; background: var(--base); }
 .traveler-profile { position: relative; }

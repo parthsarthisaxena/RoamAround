@@ -72,6 +72,7 @@ window.WebSocket = function (url, ...args) {
       <h2>Log in</h2>
 
       <div id="auth-error" style="display:none;padding:12px 14px;border-radius:8px;background:rgba(244,63,94,0.1);border:1px solid rgba(244,63,94,0.3);color:#f43f5e;font-size:0.88rem;font-weight:600;margin-bottom:14px"></div>
+      <div id="auth-success" style="display:none;padding:12px 14px;border-radius:8px;background:rgba(26,158,74,0.12);border:1px solid rgba(26,158,74,0.35);color:var(--green);font-size:0.88rem;font-weight:600;margin-bottom:14px"></div>
 
       <form class="auth-form" id="login-form" novalidate>
         <div class="field">
@@ -79,7 +80,10 @@ window.WebSocket = function (url, ...args) {
           <input id="email" name="email" type="email" placeholder="you@example.com" required autocomplete="email">
         </div>
         <div class="field">
-          <label for="password">Password</label>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
+            <label for="password" style="margin: 0;">Password</label>
+            <button type="button" id="forgot-password-btn" class="forgot-link">Forgot password?</button>
+          </div>
           <input id="password" name="password" type="password" placeholder="Your password" required autocomplete="current-password">
         </div>
         <button class="button primary full" type="submit" id="submit-btn">Log in</button>
@@ -87,6 +91,44 @@ window.WebSocket = function (url, ...args) {
       <p class="auth-note">New here? <a href="signup.html">Create an account</a></p>
     </section>
   </main>
+
+  <!-- ── Forgot Password Modal ── -->
+  <div id="forgot-modal-overlay" class="rc-forgot-overlay" role="dialog" aria-modal="true" aria-labelledby="forgot-modal-title">
+    <div class="rc-forgot-modal">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px;">
+        <div>
+          <h3 id="forgot-modal-title" style="margin: 0 0 6px; font-size: 1.3rem; color: var(--heading);">Reset password</h3>
+          <p id="forgot-modal-desc" style="margin: 0; font-size: 0.86rem; color: var(--text-sub); line-height: 1.45;">Enter your account email to receive a password reset verification code.</p>
+        </div>
+        <button type="button" id="forgot-modal-close" class="rc-forgot-close" aria-label="Close modal">&times;</button>
+      </div>
+
+      <div id="forgot-status" style="display:none;padding:12px 14px;border-radius:8px;font-size:0.86rem;font-weight:600;margin-bottom:14px;line-height:1.45;"></div>
+
+      <!-- Step 1: Request Code -->
+      <form id="forgot-step1-form" class="auth-form" style="display:grid;gap:12px;" novalidate>
+        <div class="field">
+          <label for="forgot-email">Account Email</label>
+          <input id="forgot-email" type="email" placeholder="you@example.com" required autocomplete="email">
+        </div>
+        <button class="button primary full" type="submit" id="forgot-step1-btn">Send Reset Code</button>
+      </form>
+
+      <!-- Step 2: Enter Code and New Password -->
+      <form id="forgot-step2-form" class="auth-form" style="display:none;gap:12px;" novalidate>
+        <div class="field">
+          <label for="forgot-code">6-Digit Verification Code</label>
+          <input id="forgot-code" type="text" placeholder="123456" maxlength="6" pattern="[0-9]{6}" required autocomplete="one-time-code" style="letter-spacing:0.18em;font-size:1.1rem;font-weight:700;text-align:center;">
+        </div>
+        <div class="field">
+          <label for="forgot-new-password">New Password <span style="color:var(--text-muted);font-weight:400">(min 8 chars)</span></label>
+          <input id="forgot-new-password" type="password" placeholder="Create a new password" required minlength="8" autocomplete="new-password">
+        </div>
+        <button class="button primary full" type="submit" id="forgot-step2-btn">Save New Password</button>
+        <button type="button" id="forgot-back-btn" class="button secondary compact full" style="margin-top:2px;">Change Email</button>
+      </form>
+    </div>
+  </div>
 
   <script>
     // Show reason if redirected from a protected page
@@ -97,14 +139,17 @@ window.WebSocket = function (url, ...args) {
       el.textContent = "Please log in to access that page.";
     }
 
+    // ── Login Form Submission ──
     document.getElementById("login-form").addEventListener("submit", async e => {
       e.preventDefault();
       const btn     = document.getElementById("submit-btn");
       const errEl   = document.getElementById("auth-error");
+      const succEl  = document.getElementById("auth-success");
       const email   = document.getElementById("email").value.trim();
       const password= document.getElementById("password").value.trim();
 
       errEl.style.display = "none";
+      if (succEl) succEl.style.display = "none";
       btn.textContent = "Logging in…";
       btn.disabled = true;
 
@@ -130,6 +175,179 @@ window.WebSocket = function (url, ...args) {
         errEl.style.display = "block";
         btn.textContent = "Log in";
         btn.disabled = false;
+      }
+    });
+
+    // ── Forgot Password Modal Logic ──
+    const modalOverlay = document.getElementById("forgot-modal-overlay");
+    const forgotBtn    = document.getElementById("forgot-password-btn");
+    const closeBtn     = document.getElementById("forgot-modal-close");
+    const step1Form    = document.getElementById("forgot-step1-form");
+    const step2Form    = document.getElementById("forgot-step2-form");
+    const step1Btn     = document.getElementById("forgot-step1-btn");
+    const step2Btn     = document.getElementById("forgot-step2-btn");
+    const backBtn      = document.getElementById("forgot-back-btn");
+    const statusEl     = document.getElementById("forgot-status");
+    const modalDesc    = document.getElementById("forgot-modal-desc");
+    const forgotEmail  = document.getElementById("forgot-email");
+    const forgotCode   = document.getElementById("forgot-code");
+    const forgotPass   = document.getElementById("forgot-new-password");
+
+    function setModalStatus(type, msg) {
+      statusEl.style.display = "block";
+      if (type === "error") {
+        statusEl.style.background = "rgba(244,63,94,0.12)";
+        statusEl.style.border     = "1px solid rgba(244,63,94,0.3)";
+        statusEl.style.color      = "#f43f5e";
+      } else if (type === "success") {
+        statusEl.style.background = "rgba(26,158,74,0.14)";
+        statusEl.style.border     = "1px solid rgba(26,158,74,0.35)";
+        statusEl.style.color      = "var(--green)";
+      } else {
+        statusEl.style.background = "var(--surface-2)";
+        statusEl.style.border     = "1px solid var(--line)";
+        statusEl.style.color      = "var(--text-base)";
+      }
+      statusEl.textContent = msg;
+    }
+
+    function openForgotModal() {
+      modalOverlay.classList.add("is-open");
+      statusEl.style.display = "none";
+      // Pre-fill email from login form if typed
+      const currentEmail = document.getElementById("email").value.trim();
+      if (currentEmail) forgotEmail.value = currentEmail;
+      setTimeout(() => (step2Form.style.display === "none" ? forgotEmail : forgotCode).focus(), 100);
+      document.body.style.overflow = "hidden";
+    }
+
+    function closeForgotModal() {
+      modalOverlay.classList.remove("is-open");
+      document.body.style.overflow = "";
+    }
+
+    forgotBtn.addEventListener("click", openForgotModal);
+    closeBtn.addEventListener("click", closeForgotModal);
+    modalOverlay.addEventListener("click", e => {
+      if (e.target === modalOverlay) closeForgotModal();
+    });
+    document.addEventListener("keydown", e => {
+      if (e.key === "Escape" && modalOverlay.classList.contains("is-open")) closeForgotModal();
+    });
+
+    backBtn.addEventListener("click", () => {
+      step2Form.style.display = "none";
+      step1Form.style.display = "grid";
+      modalDesc.textContent   = "Enter your account email to receive a password reset verification code.";
+      statusEl.style.display  = "none";
+      forgotEmail.focus();
+    });
+
+    // Step 1 Submit: Request Reset Code
+    step1Form.addEventListener("submit", async e => {
+      e.preventDefault();
+      const email = forgotEmail.value.trim();
+      if (!email) {
+        setModalStatus("error", "Please enter your email address.");
+        return;
+      }
+      statusEl.style.display = "none";
+      step1Btn.textContent = "Sending code…";
+      step1Btn.disabled = true;
+
+      try {
+        const res = await fetch("/api/auth/forgot-password", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          setModalStatus("error", data.error || "Failed to send reset code.");
+          step1Btn.textContent = "Send Reset Code";
+          step1Btn.disabled = false;
+          return;
+        }
+
+        step1Form.style.display = "none";
+        step2Form.style.display = "grid";
+        modalDesc.textContent   = `Enter the 6-digit code sent to ${email} and your new password.`;
+        if (data.demoCode) {
+          forgotCode.value = data.demoCode;
+          setModalStatus("success", `Reset code generated (${data.demoCode}). Enter your new password below.`);
+        } else {
+          setModalStatus("success", data.message || "Reset code sent! Check your inbox.");
+        }
+        step1Btn.textContent = "Send Reset Code";
+        step1Btn.disabled = false;
+        forgotPass.focus();
+      } catch {
+        setModalStatus("error", "Network error. Please check your connection.");
+        step1Btn.textContent = "Send Reset Code";
+        step1Btn.disabled = false;
+      }
+    });
+
+    // Step 2 Submit: Verify Code and Reset Password
+    step2Form.addEventListener("submit", async e => {
+      e.preventDefault();
+      const email       = forgotEmail.value.trim();
+      const code        = forgotCode.value.trim();
+      const newPassword = forgotPass.value.trim();
+
+      if (!code || code.length !== 6) {
+        setModalStatus("error", "Please enter a valid 6-digit code.");
+        return;
+      }
+      if (newPassword.length < 8) {
+        setModalStatus("error", "Password must be at least 8 characters.");
+        return;
+      }
+
+      statusEl.style.display = "none";
+      step2Btn.textContent = "Updating password…";
+      step2Btn.disabled = true;
+
+      try {
+        const res = await fetch("/api/auth/reset-password", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, code, newPassword })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          setModalStatus("error", data.error || "Failed to reset password.");
+          step2Btn.textContent = "Save New Password";
+          step2Btn.disabled = false;
+          return;
+        }
+
+        // Success!
+        setModalStatus("success", "Password updated successfully! Redirecting to log in…");
+        document.getElementById("email").value = email;
+        document.getElementById("password").value = "";
+        const succEl = document.getElementById("auth-success");
+        if (succEl) {
+          succEl.textContent = "Password reset successful. Please log in with your new password.";
+          succEl.style.display = "block";
+        }
+
+        setTimeout(() => {
+          closeForgotModal();
+          // Reset modal state
+          step2Form.style.display = "none";
+          step1Form.style.display = "grid";
+          forgotPass.value = "";
+          forgotCode.value = "";
+          modalDesc.textContent = "Enter your account email to receive a password reset verification code.";
+          step2Btn.textContent = "Save New Password";
+          step2Btn.disabled = false;
+          document.getElementById("password").focus();
+        }, 1200);
+      } catch {
+        setModalStatus("error", "Network error. Please try again.");
+        step2Btn.textContent = "Save New Password";
+        step2Btn.disabled = false;
       }
     });
   </script>
