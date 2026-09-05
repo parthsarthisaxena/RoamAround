@@ -6,17 +6,96 @@
  */
 "use strict";
 require("dotenv").config();
-const http      = require("node:http");
-const fs        = require("node:fs/promises");
-const path      = require("node:path");
-const bcrypt    = require("bcryptjs");
-const jwt       = require("jsonwebtoken");
-const cookieLib = require("cookie");
+const http       = require("node:http");
+const fs         = require("node:fs/promises");
+const path       = require("node:path");
+const bcrypt     = require("bcryptjs");
+const jwt        = require("jsonwebtoken");
+const cookieLib  = require("cookie");
+const nodemailer = require("nodemailer");
 const { MongoClient, ObjectId } = require("mongodb");
 const { WebSocketServer, WebSocket } = require("ws");
 const { scoreCompatibility } = require("./scoring.js");
 const { rankWithAI }         = require("./ai_matcher.js");
 const deposits               = require("./deposits.js");
+
+// ── Mailer Helper ───────────────────────────────────────
+let mailTransporter = null;
+function getMailTransporter() {
+  if (mailTransporter) return mailTransporter;
+  const user    = process.env.EMAIL_USER || process.env.SMTP_USER;
+  const pass    = process.env.EMAIL_PASS || process.env.SMTP_PASS;
+  const host    = process.env.SMTP_HOST;
+  const port    = Number(process.env.SMTP_PORT || 587);
+  const service = process.env.EMAIL_SERVICE;
+
+  if (service && user && pass) {
+    mailTransporter = nodemailer.createTransport({
+      service,
+      auth: { user, pass }
+    });
+  } else if (host && user && pass) {
+    mailTransporter = nodemailer.createTransport({
+      host,
+      port,
+      secure: port === 465,
+      auth: { user, pass }
+    });
+  }
+  return mailTransporter;
+}
+
+async function sendResetEmail(toEmail, name, code) {
+  const transporter = getMailTransporter();
+  const from = process.env.EMAIL_FROM || process.env.EMAIL_USER || process.env.SMTP_USER || '"RoamCircle" <noreply@roamcircle.com>';
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head><meta charset="utf-8"></head>
+    <body style="margin:0;padding:24px;background-color:#0f172a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+      <div style="max-width:540px;margin:0 auto;background:#181818;border:1px solid rgba(255,255,255,0.1);border-radius:16px;overflow:hidden;color:#ffffff;">
+        <div style="background:#10181c;padding:24px;text-align:center;border-bottom:1px solid rgba(255,255,255,0.08);">
+          <span style="font-size:24px;font-weight:800;color:#1a9e4a;letter-spacing:-0.5px;">RoamCircle</span>
+        </div>
+        <div style="padding:32px 28px;">
+          <h2 style="margin:0 0 12px;color:#ffffff;font-size:20px;font-weight:700;">Reset your password</h2>
+          <p style="color:#b3b3b3;line-height:1.6;font-size:15px;margin:0 0 20px;">Hello${name ? ' ' + name : ''},</p>
+          <p style="color:#b3b3b3;line-height:1.6;font-size:15px;margin:0 0 24px;">You requested a password reset for your RoamCircle account. Use the 6-digit verification code below to set a new password:</p>
+          <div style="text-align:center;margin:28px 0;">
+            <div style="display:inline-block;padding:14px 32px;background:#242424;border:2px solid #1a9e4a;border-radius:12px;font-size:32px;font-weight:800;letter-spacing:6px;color:#22b359;">
+              ${code}
+            </div>
+          </div>
+          <p style="color:#b3b3b3;line-height:1.6;font-size:14px;margin:24px 0 0;">This code is valid for <strong>15 minutes</strong>. If you didn't request this code, you can safely disregard this email.</p>
+          <hr style="border:none;border-top:1px solid rgba(255,255,255,0.08);margin:28px 0 18px;">
+          <p style="color:#727272;font-size:12px;margin:0;text-align:center;">Safe travels,<br>The RoamCircle Team</p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+
+  if (transporter) {
+    try {
+      await transporter.sendMail({
+        from,
+        to: toEmail,
+        subject: `Your RoamCircle Verification Code: ${code}`,
+        text: `Your RoamCircle password reset code is: ${code}. This code is valid for 15 minutes.`,
+        html
+      });
+      console.log(`[email] Password reset email successfully sent to ${toEmail}`);
+      return true;
+    } catch (err) {
+      console.error(`[email error] Failed to send email to ${toEmail}:`, err.message);
+      return false;
+    }
+  } else {
+    console.log(`[email:simulated] SMTP not configured in .env. Reset code for ${toEmail}: ${code}`);
+    return false;
+  }
+}
 
 // ── Config ──────────────────────────────────────────────
 const PORT        = Number(process.env.PORT || 3000);
@@ -391,7 +470,7 @@ const handleForgotPassword = dbRoute(async (req, res) => {
   }
   const user = await db.collection("users").findOne({ email });
   if (!user) {
-    return sendJson(res, 200, { ok: true, message: "If an account exists with that email, a reset code has been sent." }, req);
+    return sendJson(res, 200, { ok: true, message: "If an account exists with that email, a 6-digit verification code has been sent." }, req);
   }
   const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
   const resetExpiry = new Date(Date.now() + 15 * 60_000);
@@ -399,11 +478,13 @@ const handleForgotPassword = dbRoute(async (req, res) => {
     { _id: user._id },
     { $set: { resetCode, resetExpiry } }
   );
-  console.log(`[auth] Password reset code for ${email}: ${resetCode}`);
+
+  // Send email via nodemailer
+  await sendResetEmail(email, user.name, resetCode);
+
   sendJson(res, 200, { 
     ok: true, 
-    message: "Reset code sent to your email.",
-    demoCode: resetCode 
+    message: "A 6-digit verification code has been sent to your email address." 
   }, req);
 });
 const handleResetPassword = dbRoute(async (req, res) => {

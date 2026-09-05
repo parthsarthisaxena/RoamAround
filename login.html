@@ -271,16 +271,12 @@ window.WebSocket = function (url, ...args) {
 
         step1Form.style.display = "none";
         step2Form.style.display = "grid";
-        modalDesc.textContent   = `Enter the 6-digit code sent to ${email} and your new password.`;
-        if (data.demoCode) {
-          forgotCode.value = data.demoCode;
-          setModalStatus("success", `Reset code generated (${data.demoCode}). Enter your new password below.`);
-        } else {
-          setModalStatus("success", data.message || "Reset code sent! Check your inbox.");
-        }
+        modalDesc.textContent   = `Enter the 6-digit verification code sent to ${email} and your new password.`;
+        forgotCode.value        = "";
+        setModalStatus("success", data.message || `Verification code sent to ${email}. Check your inbox!`);
         step1Btn.textContent = "Send Reset Code";
         step1Btn.disabled = false;
-        forgotPass.focus();
+        forgotCode.focus();
       } catch {
         setModalStatus("error", "Network error. Please check your connection.");
         step1Btn.textContent = "Send Reset Code";
