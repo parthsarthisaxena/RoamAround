@@ -11,6 +11,21 @@
   <script src="theme.js"></script>
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="theme-light.css">
+  <script>
+  /* ── API Bridge: Send requests to Render, not Vercel ── */
+  const API_BASE = 'https://roamaround-xbpv.onrender.com'; // NO trailing slash!
+  const WS_BASE  = API_BASE.replace('https://', 'wss://');
+
+  const _fetch = window.fetch.bind(window);
+  window.fetch = function(url, opts) {
+    opts = opts || {};
+    if (typeof url === 'string' && url.startsWith('/')) {
+      url = API_BASE + url;
+      opts.credentials = 'include'; // Required for cookies
+    }
+    return _fetch(url, opts);
+  };
+</script>
 </head>
 <body class="auth-page">
   <main class="auth-layout">
