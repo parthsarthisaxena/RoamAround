@@ -11,6 +11,44 @@
   <script src="theme.js"></script>
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="theme-light.css">
+  
+  <script>
+/* ── Connect Vercel frontend → Render backend ── */
+const API_BASE = 'https://roamaround-xbpv.onrender.com/'; // ← your REAL Render URL, no trailing slash
+/* fetch */
+const _fetch = window.fetch.bind(window);
+window.fetch = (url, opts = {}) => {
+  if (typeof url === 'string' && url.startsWith('/')) {
+    url = API_BASE + url;
+    opts.credentials = opts.credentials || 'include';
+  }
+  return _fetch(url, opts);
+};
+
+/* XMLHttpRequest */
+const _xhrOpen = XMLHttpRequest.prototype.open;
+XMLHttpRequest.prototype.open = function (method, url, ...rest) {
+  if (typeof url === 'string' && url.startsWith('/')) url = API_BASE + url;
+  return _xhrOpen.call(this, method, url, ...rest);
+};
+
+/* plain <form action="/api/..."> */
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('form[action^="/"]').forEach(f => {
+    f.action = API_BASE + f.getAttribute('action');
+  });
+});
+
+/* WebSocket */
+const _WS = window.WebSocket;
+window.WebSocket = function (url, ...args) {
+  if (typeof url === 'string') {
+    if (url.startsWith('/')) url = WS_BASE + url;
+    else if (url.startsWith('ws')) { const u = new URL(url); url = WS_BASE + u.pathname + u.search; }
+  }
+  return new _WS(url, ...args);
+};
+</script>
 </head>
 <body class="auth-page">
   <main class="auth-layout">
