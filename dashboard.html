@@ -23,6 +23,7 @@
   <meta property="og:title" content="RoamCircle — Find Your Ride Crew">
   <meta property="og:description" content="Publish your trip, get matched by route, pace and habits, and ride together.">
 <style>
+  
     /* ── Mobile nav overflow fix ───────────────────────── */
     @media (max-width: 600px) {
       .topbar {
@@ -42,7 +43,31 @@
       #notif-wrap { flex-shrink: 0; }
     }
 </style>
+<script>
+/* ── Render backend bridge ── */
+const API_BASE = 'https://YOUR-RENDER-APP.onrender.com'; // ← no trailing slash
+const WS_BASE  = API_BASE.replace('https://', 'wss://');
 
+/* Rewrite every relative fetch('/api/...') to the Render backend */
+const _fetch = window.fetch.bind(window);
+window.fetch = (url, opts = {}) => {
+  if (typeof url === 'string' && url.startsWith('/')) {
+    url = API_BASE + url;
+    opts.credentials = opts.credentials || 'include';
+  }
+  return _fetch(url, opts);
+};
+
+/* Rewrite WebSocket (live chat) the same way */
+const _WS = window.WebSocket;
+window.WebSocket = function (url, ...args) {
+  if (typeof url === 'string') {
+    if (url.startsWith('/')) url = WS_BASE + url;
+    else if (url.startsWith('ws')) { const u = new URL(url); url = WS_BASE + u.pathname + u.search; }
+  }
+  return new _WS(url, ...args);
+};
+</script>
 </head>
 <body class="page-dashboard">
 

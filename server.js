@@ -10,7 +10,27 @@
  *  #8  /api/users/:id returns safe public profile for cache hydration
  *  #11 engines field added to package.json
  */
+// A. Use Render's port
+const PORT = process.env.PORT || 3000;
+const API_URL = import.meta.env.VITE_API_URL;
 
+fetch(`${API_URL}/api/users`);
+// B. Allow your Vercel frontend to call the API (put near the top, after express)
+const cors = require('cors');
+app.use(cors({
+  origin: ['https://YOUR-APP.vercel.app', 'http://localhost:3000'],
+  credentials: true          // required so login cookies are accepted
+}));
+
+// C. Cookies must be cross-site safe (find where you set cookies / session)
+// If express-session:
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'roamcircle',
+  resave: false,
+  saveUninitialized: false,
+  cookie: { httpOnly: true, sameSite: 'none', secure: true, maxAge: 7 * 24 * 3600 * 1000 }
+}));
+// If manual: res.cookie('sid', token, { httpOnly: true, sameSite: 'none', secure: true });
 "use strict";
 require("dotenv").config();
 const http      = require("node:http");
@@ -25,7 +45,7 @@ const { scoreCompatibility } = require("./scoring.js");
 const { rankWithAI }         = require("./ai_matcher.js");
 const deposits               = require("./deposits.js");
 // ── Config ───────────────────────────────────────────────────
-const PORT        = Number(process.env.PORT        || 3000);
+//const PORT        = Number(process.env.PORT        || 3000);
 const MONGODB_URI = process.env.MONGODB_URI        || "mongodb://127.0.0.1:27017";
 const JWT_SECRET  = String(process.env.JWT_SECRET || "").trim();
 const GEMINI_KEY  = process.env.GEMINI_API_KEY      || "";
