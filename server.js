@@ -46,9 +46,6 @@ function getMailTransporter() {
 }
 
 async function sendResetEmail(toEmail, name, code) {
-  const transporter = getMailTransporter();
-  const from = process.env.EMAIL_FROM || process.env.EMAIL_USER || process.env.SMTP_USER || '"RoamCircle" <noreply@roamcircle.com>';
-
   const html = `
     <!DOCTYPE html>
     <html>
@@ -76,8 +73,40 @@ async function sendResetEmail(toEmail, name, code) {
     </html>
   `;
 
+  // 1. Resend API (if RESEND_API_KEY is configured in env)
+  if (process.env.RESEND_API_KEY) {
+    try {
+      const fromAddr = process.env.EMAIL_FROM || "RoamCircle <onboarding@resend.dev>";
+      const resp = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${process.env.RESEND_API_KEY}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          from: fromAddr,
+          to: [toEmail],
+          subject: `Your RoamCircle Verification Code: ${code}`,
+          html
+        })
+      });
+      const data = await resp.json();
+      if (resp.ok) {
+        console.log(`[email:resend] Verification email sent to ${toEmail} (ID: ${data.id})`);
+        return true;
+      } else {
+        console.error(`[email:resend error]`, data);
+      }
+    } catch (err) {
+      console.error(`[email:resend fetch error]`, err.message);
+    }
+  }
+
+  // 2. Nodemailer (Gmail / Custom SMTP)
+  const transporter = getMailTransporter();
   if (transporter) {
     try {
+      const from = process.env.EMAIL_FROM || (process.env.EMAIL_USER ? `"RoamCircle" <${process.env.EMAIL_USER}>` : process.env.SMTP_USER || '"RoamCircle" <noreply@roamcircle.com>');
       await transporter.sendMail({
         from,
         to: toEmail,
@@ -85,16 +114,19 @@ async function sendResetEmail(toEmail, name, code) {
         text: `Your RoamCircle password reset code is: ${code}. This code is valid for 15 minutes.`,
         html
       });
-      console.log(`[email] Password reset email successfully sent to ${toEmail}`);
+      console.log(`[email:smtp] Verification email sent to ${toEmail}`);
       return true;
     } catch (err) {
-      console.error(`[email error] Failed to send email to ${toEmail}:`, err.message);
+      console.error(`[email:smtp error] Failed to send email to ${toEmail}:`, err.message);
       return false;
     }
-  } else {
-    console.log(`[email:simulated] SMTP not configured in .env. Reset code for ${toEmail}: ${code}`);
-    return false;
   }
+
+  // 3. Fallback: No credentials set on Render
+  console.warn(`\n[EMAIL ALERT] Real email could not be dispatched to ${toEmail} because no email provider is configured in Render environment variables.`);
+  console.warn(`[EMAIL ALERT] Reset Code: ${code}`);
+  console.warn(`[EMAIL ALERT] To enable live emails: Add EMAIL_SERVICE=gmail, EMAIL_USER, and EMAIL_PASS (Google App Password) to your Render Dashboard Environment Variables.\n`);
+  return false;
 }
 
 // ── Config ──────────────────────────────────────────────
