@@ -48,7 +48,7 @@
 const API_BASE = 'https://roamaround-xbpv.onrender.com/'; // ← no trailing slash
 const WS_BASE  = API_BASE.replace('https://', 'wss://');
 
-/* Rewrite every relative fetch('/api/...') to the Render backend */
+/* 1. Rewrite fetch('/api/...') → Render */
 const _fetch = window.fetch.bind(window);
 window.fetch = (url, opts = {}) => {
   if (typeof url === 'string' && url.startsWith('/')) {
@@ -58,7 +58,21 @@ window.fetch = (url, opts = {}) => {
   return _fetch(url, opts);
 };
 
-/* Rewrite WebSocket (live chat) the same way */
+/* 2. Rewrite XMLHttpRequest too (in case signup uses XHR) */
+const _xhrOpen = XMLHttpRequest.prototype.open;
+XMLHttpRequest.prototype.open = function (method, url, ...rest) {
+  if (typeof url === 'string' && url.startsWith('/')) url = API_BASE + url;
+  return _xhrOpen.call(this, method, url, ...rest);
+};
+
+/* 3. Rewrite plain <form action="/api/..."> too */
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('form[action^="/"]').forEach(f => {
+    f.action = API_BASE + f.getAttribute('action');
+  });
+});
+
+/* 4. Rewrite WebSocket (live chat) */
 const _WS = window.WebSocket;
 window.WebSocket = function (url, ...args) {
   if (typeof url === 'string') {

@@ -28,7 +28,7 @@ fetch(`${API_URL}/api/users`);
 // B. Allow your Vercel frontend to call the API (put near the top, after express)
 const cors = require('cors');
 app.use(cors({
-  origin: ['https://YOUR-APP.vercel.app', 'http://localhost:3000'],
+  origin: ['https://roamaround-ivory.vercel.app', 'http://localhost:3000'],
   credentials: true          // required so login cookies are accepted
 }));
 
