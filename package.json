@@ -8,9 +8,9 @@
     "npm": ">=9.0.0"
   },
   "scripts": {
-    "start": "node server.cjs",
-    "dev": "node --watch server.js",
-    "eval": "node -r dotenv/config eval/run_eval.js"
+  "start": "node server.js",
+  "dev": "node --watch server.js",
+  "eval": "node -r dotenv/config eval/run_eval.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
